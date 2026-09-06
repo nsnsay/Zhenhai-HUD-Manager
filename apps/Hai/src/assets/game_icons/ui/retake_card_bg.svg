@@ -1,0 +1,23 @@
+<svg width="1101" height="1504" viewBox="0 0 1101 1504" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M1074 0C1088.91 0 1101 12.0883 1101 27V1477C1101 1491.91 1088.91 1504 1074 1504H27C12.0883 1504 0 1491.91 0 1477V27C1.34014e-05 12.0883 12.0883 3.50317e-07 27 0H1074ZM33.2041 21.9902C28.2336 21.9902 24.2042 26.0197 24.2041 30.9902V1470C24.2041 1474.97 28.2328 1479 33.2031 1479H1068.16C1073.13 1479 1077.16 1474.97 1077.16 1470V30.9902C1077.16 26.0197 1073.13 21.9902 1068.16 21.9902H33.2041Z" fill="#BEBEBE"/>
+<path d="M24.2036 25.9903C24.2036 23.7811 25.9945 21.9903 28.2036 21.9903H1073.16C1075.37 21.9903 1077.16 23.7812 1077.16 25.9903V1475C1077.16 1477.21 1075.37 1479 1073.16 1479H28.2036C25.9945 1479 24.2036 1477.21 24.2036 1475V25.9903Z" fill="#282828" fill-opacity="0.9"/>
+<rect x="378.965" y="769.071" width="709.929" height="5.07087" transform="rotate(90 378.965 769.071)" fill="#888888"/>
+<rect x="744.071" y="769.071" width="709.929" height="5.07087" transform="rotate(90 744.071 769.071)" fill="#888888"/>
+<rect x="1077" y="1129" width="1053" height="4.99991" transform="rotate(-180 1077 1129)" fill="#888888"/>
+<rect x="1077" y="769" width="1053" height="4.99991" transform="rotate(-180 1077 769)" fill="#888888"/>
+<rect x="24" y="1124" width="19.9197" height="4.97993" fill="#BEBEBE"/>
+<rect x="1057" y="1124" width="19.9197" height="4.97993" fill="#BEBEBE"/>
+<rect x="743.98" y="1459" width="19.9197" height="4.97993" transform="rotate(90 743.98 1459)" fill="#BEBEBE"/>
+<rect x="378.98" y="1459" width="19.9197" height="4.97993" transform="rotate(90 378.98 1459)" fill="#BEBEBE"/>
+<rect x="354" y="1129.9" width="44.8194" height="-4.97993" rx="-2.48997" fill="#BEBEBE"/>
+<rect x="718" y="1128.98" width="44.8194" height="-4.97993" rx="-2.48997" fill="#BEBEBE"/>
+<rect x="373.92" y="1105" width="44.8194" height="-4.97993" rx="-2.48997" transform="rotate(90 373.92 1105)" fill="#BEBEBE"/>
+<rect x="738" y="1105" width="44.8194" height="-4.97993" rx="-2.48997" transform="rotate(90 738 1105)" fill="#BEBEBE"/>
+<path d="M24.2036 25.9903C24.2036 23.7811 25.9945 21.9903 28.2036 21.9903H1073.16C1075.37 21.9903 1077.16 23.7812 1077.16 25.9903V1475C1077.16 1477.21 1075.37 1479 1073.16 1479H28.2036C25.9945 1479 24.2036 1477.21 24.2036 1475V25.9903Z" fill="url(#paint0_linear_14_6343)" fill-opacity="0.9"/>
+<defs>
+<linearGradient id="paint0_linear_14_6343" x1="40" y1="36" x2="634" y2="1312" gradientUnits="userSpaceOnUse">
+<stop stop-color="#D9D9D9" stop-opacity="0.35"/>
+<stop offset="1" stop-color="#737373" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>

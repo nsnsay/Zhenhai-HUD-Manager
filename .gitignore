@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+release/
+.turbo/
+*.local
+.DS_Store
+logo.pdn
+logo.png
+.agents/
+skills-lock.json
+bun.lock

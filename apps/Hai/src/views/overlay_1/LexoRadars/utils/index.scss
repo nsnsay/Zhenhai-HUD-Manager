@@ -1,0 +1,459 @@
+.map-container {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  position: relative;
+
+  .map {
+    width: 1024px;
+    height: 1024px;
+    position: relative;
+    transform: scale(1);
+    transition: all 0.5s;
+  }
+}
+
+@keyframes FlashOrFragDeployed {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.8);
+    opacity: 1;
+  }
+
+  100% {
+    box-shadow: 0 0 0 50px rgba(0, 0, 0, 0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes BombPlanted {
+  0% {
+    box-shadow: 0 0 0 0 rgba(185, 5, 5, 0.8);
+  }
+
+  100% {
+    box-shadow: 0 0 0 50px rgba(185, 5, 5, 0);
+  }
+}
+
+@keyframes BombExploded {
+  0% {
+    box-shadow: 0 0 0 0 rgba(185, 5, 5, 0.8);
+  }
+
+  100% {
+    box-shadow: 0 0 0 150px rgba(185, 5, 5, 0);
+  }
+}
+
+@keyframes BombDefused {
+  0% {
+    box-shadow: 0 0 0 0 rgba(5, 185, 5, 0.8);
+  }
+
+  100% {
+    box-shadow: 0 0 0 150px rgba(5, 185, 5, 0);
+  }
+}
+
+.map {
+
+  .player,
+  .grenade,
+  .bomb {
+    position: absolute;
+    height: 0px;
+    width: 0px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease;
+
+    .content {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /*transition: all 0.1s ease;*/
+  }
+
+  .player {
+    .background {
+      /* background-color:white; */
+      /* clip-path: polygon(0 0, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0 0); */
+      background-image: url('@/assets/game_icons/ui/map_view_selected.svg');
+      background-position: -7px -17px;
+      background-size: cover;
+      background-repeat: no-repeat;
+      width: 100%;
+      height: 100%;
+      transition:
+        transform 0.2s linear,
+        scale 0.5s linear;
+    }
+
+    .background-fire {
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+  }
+}
+
+@keyframes Blink {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.map {
+  .player {
+    .background-fire {
+      .bg {
+        width: 100%;
+        height: 100%;
+        background-image: url('./assets/shootFire.png');
+        background-position: center;
+        background-size: contain;
+        background-repeat: no-repeat;
+        position: relative;
+        left: 50%;
+        animation: Blink;
+        animation-duration: 0.25s;
+        animation-iteration-count: infinite;
+      }
+    }
+
+    &.dead {
+      opacity: 0.8;
+      z-index: 1;
+
+      .background {
+        background-image: none !important;
+        background-color: transparent;
+
+        &::before,
+        &::after {
+          content: '';
+          position: absolute;
+          width: 100%;
+          height: 20%;
+          background-color: #ff4d4d;
+          top: 50%;
+          left: 0;
+          border-radius: 2px;
+          box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        &::before {
+          transform: translateY(-50%) rotate(45deg);
+        }
+
+        &::after {
+          transform: translateY(-50%) rotate(-45deg);
+        }
+      }
+
+      .background-fire,
+      .label {
+        display: none !important;
+      }
+    }
+  }
+
+  .player {
+    text-shadow: 1px 2px 3px black !important;
+    transition:
+      transform 0.1s ease,
+      opacity 1s;
+    image-rendering: -moz-crisp-edges;
+    /* Firefox */
+    image-rendering: -o-crisp-edges;
+    /* Opera */
+    image-rendering: -webkit-optimize-contrast;
+    /* Webkit (non-standard naming) */
+    image-rendering: crisp-edges;
+    -ms-interpolation-mode: nearest-neighbor;
+    /* IE (non-standard property) */
+  }
+
+  .player:not(.dead) {
+    z-index: 2;
+  }
+
+
+  .label {
+    width: 100%;
+    height: 100%;
+    background: var(--main-90);
+  }
+
+}
+
+/*
+  .map .player.shooting .background {
+    width: 110%;
+    height: 110%;
+  }
+  .map .player.active.shooting .background {
+    width: 132%;
+    height: 132%;
+  }
+  */
+
+.player.active {
+  z-index: 3;
+}
+
+.player.active {
+  .content {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+.grenade {
+  .background {
+    border-radius: 32px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 1;
+    transition: opacity 0.25s;
+  }
+
+  &.smoke {
+    .background {
+      background-color: var(--primary-80);
+      opacity: 1;
+      transition: opacity 1s;
+    }
+
+    &.inair {
+      .background {
+        background-color: transparent !important;
+        border: none !important;
+        background-image: url('./grenades/smoke.png');
+        filter: invert(1);
+      }
+    }
+
+    &.exploded {
+      .background {
+        content: '';
+      }
+    }
+  }
+
+  &.flashbang,
+  &.frag {
+    filter: invert(1);
+  }
+
+  &.flashbang {
+    .background {
+      background-image: url('./grenades/flash.png');
+      background-color: transparent;
+    }
+  }
+
+  &.frag {
+    .background {
+      background-image: url('./grenades/frag.png');
+      background-color: transparent;
+    }
+  }
+}
+
+.grenade,
+.bomb {
+  .explode-point {
+    position: absolute;
+    width: 2px;
+    top: calc(50% - 1px);
+    left: calc(50% - 1px);
+    height: 2px;
+    border-radius: 0.08px;
+  }
+}
+
+.grenade {
+
+  &.flashbang.exploded,
+  &.frag.exploded {
+    .explode-point {
+      animation: FlashOrFragDeployed 0.25s 1 forwards;
+    }
+
+    .background {
+      opacity: 0;
+    }
+  }
+}
+
+.grenade {
+  &.smoke {
+    .background {
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .background {
+      border: 5px solid var(--main-100);
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+
+  }
+
+  &.firebomb {
+    .background {
+      background-color: transparent;
+      background-image: url('./grenades/firebomb.png');
+      filter: invert(1);
+    }
+  }
+
+  &.inferno {
+    width: 12px;
+    height: 12px;
+  }
+
+  .content {
+    position: absolute;
+  }
+
+  &.inferno {
+    .background {
+      background-color: red;
+      opacity: 0.5;
+      border: 2px solid orange;
+    }
+  }
+}
+
+.player .background,
+.player .label,
+.grenade .background,
+.bomb .background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bomb {
+  .background {
+    width: 48px;
+    height: 48px;
+    filter: grayscale(1);
+  }
+}
+
+.player {
+  .label {
+    color: white;
+    font-weight: 800;
+    border-radius: 50%;
+    transition: background-color 0.5s;
+    -webkit-font-smoothing: crisp-edges;
+    font-size: 38px;
+
+  }
+}
+
+.bomb {
+  transition: transform 0.1s ease;
+
+  .background {
+    background-image: url('./grenades/bomb.png');
+    background-size: 77%;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+}
+
+.bomb {
+
+  &.planted,
+  &.defusing {
+    .explode-point {
+      animation: BombPlanted 2s infinite;
+    }
+  }
+
+  &.exploded {
+    .explode-point {
+      animation: BombExploded 2s 1 forwards;
+    }
+  }
+
+  &.defused {
+    .explode-point {
+      animation: BombDefused 2s 1 forwards;
+    }
+  }
+}
+
+.player {
+
+  .label {
+    background: var(--main-90);
+  }
+
+
+
+  &.T.hasBomb {
+    .label {
+      background: red;
+    }
+  }
+
+  &.dead {
+    .background {
+      display: none;
+    }
+
+    .label {
+      background: transparent;
+    }
+  }
+
+  &.dead.CT .label,
+  &.CT .label div {
+    color: var(--ct-color);
+  }
+
+  &.dead.T .label,
+  &.T .label div {
+    color: var(--t-color);
+  }
+}
+
+.hidden {
+  opacity: 0 !important;
+}
+
+.grenade {
+  &.smoke {
+
+    &.exploded,
+    &.landed {
+      .background {
+        display: flex;
+        flex-wrap: wrap;
+      }
+    }
+  }
+}

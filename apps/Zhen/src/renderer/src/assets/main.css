@@ -1,0 +1,64 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "@fontsource-variable/sora/wght.css";
+@import "@ctechhindi/vue3-json-viewer/styles";
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+html {
+  background: transparent;
+}
+
+body {
+  --ui-components-header-height: 3.25rem;
+  background-color: var(--ui-bg);
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+}
+
+body[data-window-material="acrylic"],
+body[data-window-material="mica"] {
+  background-color: transparent;
+}
+
+.child-route-enter-active,
+.child-route-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.child-route-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.child-route-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .child-route-enter-active,
+  .child-route-leave-active {
+    transition: opacity 100ms ease;
+    will-change: auto;
+  }
+
+  .child-route-enter-from,
+  .child-route-leave-to {
+    transform: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-default outline-default/50;
+  }
+}

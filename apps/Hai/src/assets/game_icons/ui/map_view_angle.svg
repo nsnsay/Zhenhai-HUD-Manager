@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="155.322px" height="77.417px" viewBox="0 0 155.322 77.417" enable-background="new 0 0 155.322 77.417"
+	 xml:space="preserve">
+<symbol  id="dude-transit" viewBox="0 -25.1 21.25 25.118">
+	<path fill-rule="evenodd" clip-rule="evenodd" fill="#FFFFFF" d="M15.5-4.2l0.75-1.05l1-3.1l3.9-2.65v-0.05
+		c0.067-0.1,0.1-0.233,0.1-0.4c0-0.2-0.05-0.383-0.15-0.55c-0.167-0.233-0.383-0.35-0.65-0.35l-4.3,1.8l-1.2,1.65l-1.5-3.95
+		l2.25-5.05l-3.25-6.9c-0.267-0.2-0.633-0.3-1.1-0.3c-0.3,0-0.55,0.15-0.75,0.45c-0.1,0.133-0.15,0.25-0.15,0.35
+		c0,0.067,0.017,0.15,0.05,0.25c0.033,0.1,0.067,0.184,0.1,0.25l2.55,5.6L10.7-14l-3.05-4.9L0.8-18.7
+		c-0.367,0.033-0.6,0.184-0.7,0.45c-0.067,0.3-0.1,0.467-0.1,0.5c0,0.5,0.2,0.767,0.6,0.8l5.7,0.15l2.15,5.4l3.1,5.65L9.4-5.6
+		c-1.367-2-2.1-3.033-2.2-3.1C7.1-8.8,6.95-8.85,6.75-8.85C6.35-8.85,6.1-8.667,6-8.3C5.9-8,5.9-7.8,6-7.7H5.95l2.5,4.4l3.7,0.3
+		L14-3.5L15.5-4.2z M14.55-2.9c-0.333,0.4-0.45,0.85-0.35,1.35c0.033,0.5,0.25,0.9,0.65,1.2S15.7,0.066,16.2,0
+		c0.5-0.067,0.9-0.3,1.2-0.7c0.333-0.4,0.467-0.85,0.4-1.35c-0.066-0.5-0.3-0.9-0.7-1.2c-0.4-0.333-0.85-0.45-1.35-0.35
+		C15.25-3.533,14.85-3.3,14.55-2.9z"/>
+</symbol>
+<g id="Layer_1">
+</g>
+<g id="Layer_2">
+	<g>
+		<defs>
+			<polygon id="SVGID_92_" points="154.656,26.275 77.661,74.812 0.666,26.275 77.661,-19.507 			"/>
+		</defs>
+		<clipPath id="SVGID_1_">
+			<use xlink:href="#SVGID_92_"  overflow="visible"/>
+		</clipPath>
+		
+			<radialGradient id="SVGID_2_" cx="86.3711" cy="9.1387" r="73.0879" gradientTransform="matrix(1.3144 0 0 1.0965 -35.5162 77.9932)" gradientUnits="userSpaceOnUse">
+			<stop  offset="0" style="stop-color:#FFFFFF"/>
+			<stop  offset="0.3602" style="stop-color:#FFFFFF;stop-opacity:0.7"/>
+			<stop  offset="0.5699" style="stop-color:#FFFFFF;stop-opacity:0.42"/>
+			<stop  offset="0.8387" style="stop-color:#FFFFFF;stop-opacity:0.14"/>
+			<stop  offset="1" style="stop-color:#FFFFFF;stop-opacity:0"/>
+		</radialGradient>
+		<ellipse clip-path="url(#SVGID_1_)" fill="url(#SVGID_2_)" cx="78.008" cy="88.016" rx="96.065" ry="80.141"/>
+	</g>
+	<g>
+		<g>
+			<defs>
+				<polygon id="SVGID_95_" points="9.777,5.189 -44.864,52.73 -99.504,5.189 -44.863,-39.654 				"/>
+			</defs>
+			<clipPath id="SVGID_3_">
+				<use xlink:href="#SVGID_95_"  overflow="visible"/>
+			</clipPath>
+			
+				<radialGradient id="SVGID_4_" cx="-6.9238" cy="-9.3652" r="51.8677" gradientTransform="matrix(1.3144 0 0 1.3129 -35.5162 88.3596)" gradientUnits="userSpaceOnUse">
+				<stop  offset="0" style="stop-color:#FFFFFF"/>
+				<stop  offset="0.3172" style="stop-color:#FFFFFF;stop-opacity:0.7"/>
+				<stop  offset="0.6344" style="stop-color:#FFFFFF;stop-opacity:0.42"/>
+				<stop  offset="0.8602" style="stop-color:#FFFFFF;stop-opacity:0.14"/>
+				<stop  offset="1" style="stop-color:#FFFFFF;stop-opacity:0"/>
+			</radialGradient>
+			<ellipse clip-path="url(#SVGID_3_)" fill="url(#SVGID_4_)" cx="-44.616" cy="76.063" rx="68.174" ry="68.099"/>
+		</g>
+	</g>
+</g>
+</svg>

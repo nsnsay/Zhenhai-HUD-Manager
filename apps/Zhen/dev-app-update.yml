@@ -1,0 +1,4 @@
+provider: github
+owner: nsnsay
+repo: ZhenHai-HUD-Manager
+updaterCacheDirName: zhen-updater

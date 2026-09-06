@@ -1,0 +1,16 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="16" cy="16" r="14.5" stroke="white" stroke-width="3"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M26.2212 17C26.3056 16.4923 26.3495 15.9709 26.3495 15.4392C26.3495 10.3548 22.3329 6.20841 17.2997 6H16.5044C16.335 6.00701 16.1669 6.01848 16 6.03428V17H24.5H26.2212Z" fill="white"/>
+<rect x="16" y="2" width="1" height="3" fill="white"/>
+<rect x="16" y="27" width="1" height="3" fill="white"/>
+<rect x="30" y="16" width="1" height="3" transform="rotate(90 30 16)" fill="white"/>
+<rect x="5" y="16" width="1" height="3" transform="rotate(90 5 16)" fill="white"/>
+<rect x="27.616" y="22" width="1" height="2" transform="rotate(120 27.616 22)" fill="white"/>
+<rect x="6.23206" y="10" width="1" height="2" transform="rotate(120 6.23206 10)" fill="white"/>
+<rect x="9.40369" y="27.9707" width="1" height="2" transform="rotate(-150 9.40369 27.9707)" fill="white"/>
+<rect x="22.866" y="7.23206" width="1" height="2" transform="rotate(-150 22.866 7.23206)" fill="white"/>
+<rect x="4.37738" y="23.2207" width="1" height="2" transform="rotate(-120 4.37738 23.2207)" fill="white"/>
+<rect x="26.5" y="11.866" width="1" height="2" transform="rotate(-120 26.5 11.866)" fill="white"/>
+<rect x="8.75" y="4.83975" width="1" height="2" transform="rotate(-30 8.75 4.83975)" fill="white"/>
+<rect x="22" y="25.5" width="1" height="2" transform="rotate(-30 22 25.5)" fill="white"/>
+</svg>
