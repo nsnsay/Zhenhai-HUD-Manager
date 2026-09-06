@@ -10,3 +10,4 @@ logo.png
 .agents/
 skills-lock.json
 bun.lock
+apps/Zhen/resources/overlay/
