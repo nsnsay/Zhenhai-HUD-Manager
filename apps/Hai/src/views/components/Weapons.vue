@@ -41,15 +41,9 @@ const getCurrentWeapon = computed<Weapon | null>(() => {
 </script>
 
 <template v-if="player">
-  <div
-    class="weapons relative"
-    :class="[{ 'isolate-image': isolateImage }, player?.team.side, customClassName]"
-  >
-    <img
-      :class="{ 'opacity-70': !['active', 'reloading'].includes(getCurrentWeapon.state) }"
-      v-if="getCurrentWeapon"
-      :src="`./equipment/${formatWeaponName(getCurrentWeapon.name)}.svg`"
-    />
+  <div class="weapons relative" :class="[{ 'isolate-image': isolateImage }, player?.team.side, customClassName]">
+    <img :class="{ 'opacity-70': !['active', 'reloading'].includes(getCurrentWeapon.state) }" v-if="getCurrentWeapon"
+      :src="`./equipment/${formatWeaponName(getCurrentWeapon.name)}.svg`" />
   </div>
 </template>
 
