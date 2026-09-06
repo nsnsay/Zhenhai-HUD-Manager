@@ -1,206 +1,215 @@
-import * as I from './interfaces.d.ts';
-import type { TeamInfo } from './info';
+import * as I from "./interfaces.d.ts";
+import type { TeamInfo } from "./info";
 
-export type Orientation = 'left' | 'right';
+export type Orientation = "left" | "right";
 
 export interface Team {
-	logo: string | null;
-	score: number;
-	consecutive_round_losses: number;
-	timeouts_remaining: number;
-	matches_won_this_series: number;
-	side: I.Side;
-	name: string;
-	country: string | null;
-	id: string | null;
-	orientation: Orientation;
-	extra: Record<string, string>;
-	_db?: TeamInfo | undefined;
+  logo: string | null;
+  score: number;
+  consecutive_round_losses: number;
+  timeouts_remaining: number;
+  matches_won_this_series: number;
+  side: I.Side;
+  name: string;
+  country: string | null;
+  id: string | null;
+  orientation: Orientation;
+  extra: Record<string, string>;
+  _db?: TeamInfo | undefined;
 }
 
 export interface RoundInfo {
-	team: Team;
-	round: number;
-	side: I.Side;
-	outcome: I.RoundOutcome;
+  team: Team;
+  round: number;
+  side: I.Side;
+  outcome: I.RoundOutcome;
 }
 export interface Weapon {
-	name: string;
-	paintkit: string;
-	type?: I.WeaponType;
-	ammo_clip?: number;
-	ammo_clip_max?: number;
-	ammo_reserve?: number;
-	state: 'active' | 'holstered' | 'reloading';
-	id: string;
+  name: string;
+  paintkit: string;
+  type?: I.WeaponType;
+  ammo_clip?: number;
+  ammo_clip_max?: number;
+  ammo_reserve?: number;
+  state: "active" | "holstered" | "reloading";
+  id: string;
 }
 
 export interface Player {
-	steamid: string;
-	name: string;
-	defaultName: string;
-	clan?: string;
-	observer_slot?: number;
-	team: Team;
-	stats: {
-		kills: number;
-		assists: number;
-		deaths: number;
-		mvps: number;
-		score: number;
-	};
-	weapons: Weapon[];
-	state: {
-		health: number;
-		armor: number;
-		helmet: boolean;
-		defusekit?: boolean;
-		flashed: number;
-		smoked: number;
-		burning: number;
-		money: number;
-		round_kills: number;
-		round_killhs: number;
-		round_totaldmg: number;
-		equip_value: number;
-		adr: number;
-	};
-	position: number[];
-	forward: number[];
-	avatar: string | null;
-	country: string | null;
-	realName: string | null;
-	extra: Record<string, string>;
-	isFocused: boolean | null;
-	isDead: boolean | null;
-	isArmorHelmet: boolean | null;
-	isArmor: boolean | null;
-	isBomb: boolean | null;
-	grenades: Weapon[];
-	primaryweapon: Weapon | undefined;
-	secondaryweapon: Weapon | undefined;
-	knifeweapon: Weapon | undefined;
-	activeweapon: Weapon | undefined;
-	_db: PlayerFormData | null;
+  steamid: string;
+  name: string;
+  defaultName: string;
+  clan?: string;
+  observer_slot?: number;
+  team: Team;
+  stats: {
+    kills: number;
+    assists: number;
+    deaths: number;
+    mvps: number;
+    score: number;
+  };
+  weapons: Weapon[];
+  state: {
+    health: number;
+    armor: number;
+    helmet: boolean;
+    defusekit?: boolean;
+    flashed: number;
+    smoked: number;
+    burning: number;
+    money: number;
+    round_kills: number;
+    round_killhs: number;
+    round_totaldmg: number;
+    equip_value: number;
+    adr: number;
+  };
+  position: number[];
+  forward: number[];
+  avatar: string | null;
+  country: string | null;
+  realName: string | null;
+  extra: Record<string, string>;
+  isFocused: boolean | null;
+  isDead: boolean | null;
+  isArmorHelmet: boolean | null;
+  isArmor: boolean | null;
+  isBomb: boolean | null;
+  grenades: Weapon[];
+  primaryweapon: Weapon | undefined;
+  secondaryweapon: Weapon | undefined;
+  knifeweapon: Weapon | undefined;
+  activeweapon: Weapon | undefined;
+  _db: PlayerFormData | null;
 }
 
 export type RoundWins = {
-	[key: string]: I.RoundOutcome;
+  [key: string]: I.RoundOutcome;
 };
 export interface Bomb {
-	state: 'carried' | 'planted' | 'dropped' | 'defused' | 'defusing' | 'planting' | 'exploded';
-	countdown?: number;
-	player?: Player;
-	site: 'A' | 'B' | null;
-	position: number[];
+  state: "carried" | "planted" | "dropped" | "defused" | "defusing" | "planting" | "exploded";
+  countdown?: number;
+  player?: Player;
+  site: "A" | "B" | null;
+  position: number[];
 }
 
 export interface Map {
-	mode: string;
-	name: string;
-	phase: 'warmup' | 'live' | 'intermission' | 'gameover';
-	round: number;
-	team_ct: Team;
-	team_t: Team;
-	regularMR: number;
-	num_matches_to_win_series: number;
-	current_spectators: number;
-	souvenirs_total: number;
-	round_wins: RoundWins;
-	rounds: I.RoundInfo[];
+  mode: string;
+  name: string;
+  phase: "warmup" | "live" | "intermission" | "gameover";
+  round: number;
+  team_ct: Team;
+  team_t: Team;
+  regularMR: number;
+  num_matches_to_win_series: number;
+  current_spectators: number;
+  souvenirs_total: number;
+  round_wins: RoundWins;
+  rounds: I.RoundInfo[];
 }
 
 export interface Round {
-	phase: 'freezetime' | 'live' | 'over';
-	bomb?: 'planted' | 'exploded' | 'defused';
-	win_team?: I.Side;
+  phase: "freezetime" | "live" | "over";
+  bomb?: "planted" | "exploded" | "defused";
+  win_team?: I.Side;
 }
 
 export interface Observer {
-	activity?: 'playing' | 'textinput' | 'menu';
-	spectarget?: 'free' | (string & {});
-	position?: number[];
-	forward?: number[];
+  activity?: "playing" | "textinput" | "menu";
+  spectarget?: "free" | (string & {});
+  position?: number[];
+  forward?: number[];
 }
 
 export interface GrenadeBase {
-	id: string;
-	owner: string;
-	lifetime: number;
+  id: string;
+  owner: string;
+  lifetime: number;
 }
 
 export interface DecoySmokeGrenade extends GrenadeBase {
-	position: number[];
-	velocity: number[];
-	type: 'decoy' | 'smoke';
-	effecttime: number;
+  position: number[];
+  velocity: number[];
+  type: "decoy" | "smoke";
+  effecttime: number;
 }
 
 export interface FragOrFireBombOrFlashbandGrenade extends GrenadeBase {
-	position: number[];
-	type: 'frag' | 'firebomb' | 'flashbang';
-	velocity: number[];
+  position: number[];
+  type: "frag" | "firebomb" | "flashbang";
+  velocity: number[];
 }
 
 export interface InfernoGrenade extends GrenadeBase {
-	type: 'inferno';
-	flames: { id: string; position: number[] }[];
+  type: "inferno";
+  flames: { id: string; position: number[] }[];
 }
 
 export type Grenade = DecoySmokeGrenade | FragOrFireBombOrFlashbandGrenade | InfernoGrenade;
 
 export interface Phase {
-	phase?: 'freezetime' | 'bomb' | 'warmup' | 'live' | 'over' | 'defuse' | 'paused' | 'timeout_ct' | 'timeout_t';
-	phase_ends_in: number;
-	timeout_team?: Team;
+  phase?:
+    | "freezetime"
+    | "bomb"
+    | "warmup"
+    | "live"
+    | "over"
+    | "defuse"
+    | "paused"
+    | "timeout_ct"
+    | "timeout_t";
+  phase_ends_in: number;
+  timeout_team?: Team;
 }
 export interface CSGO {
-	provider: I.Provider;
-	map: Map;
-	round: Round | null;
-	observer: Observer;
-	player: Player | null;
-	players: Player[];
-	bomb: Bomb | null;
-	grenades: Grenade[];
-	previously?: any;
-	phase_countdowns: I.Phase;
-	matchinfo?: I.MatchsInfo;
-	settings?: I.SettingFormData;
-	auth?: {
-		token: string;
-	};
+  provider: I.Provider;
+  map: Map;
+  round: Round | null;
+  observer: Observer;
+  player: Player | null;
+  players: Player[];
+  bomb: Bomb | null;
+  grenades: Grenade[];
+  previously?: any;
+  phase_countdowns: I.Phase;
+  matchinfo?: I.MatchsInfo;
+  settings?: I.SettingFormData;
+  auth?: {
+    token: string;
+  };
 }
 export interface Score {
-	winner: I.Team;
-	loser: I.Team;
-	map: Map;
-	mapEnd: boolean;
+  winner: I.Team;
+  loser: I.Team;
+  map: Map;
+  mapEnd: boolean;
 }
 
 export interface KillEvent {
-	killer: Player | null;
-	victim: Player;
-	assister: Player | null;
-	flashed: boolean;
-	headshot: boolean;
-	weapon: string;
-	wallbang: boolean;
-	attackerblind: boolean;
-	thrusmoke: boolean;
-	noscope: boolean;
-	attackerinair: boolean;
+  killer: Player | null;
+  victim: Player;
+  assister: Player | null;
+  flashed: boolean;
+  headshot: boolean;
+  weapon: string;
+  wallbang: boolean;
+  attackerblind: boolean;
+  thrusmoke: boolean;
+  noscope: boolean;
+  attackerinair: boolean;
 }
 
 export interface HurtEvent {
-	attacker: Player;
-	victim: Player;
-	health: number;
-	armor: number;
-	weapon: string;
-	dmg_health: number;
-	dmg_armor: number;
-	hitgroup: number;
+  attacker: Player;
+  victim: Player;
+  health: number;
+  armor: number;
+  weapon: string;
+  dmg_health: number;
+  dmg_armor: number;
+  hitgroup: number;
 }
 
 //export type DigestMirvType = ((kill: RawKill, eventType: 'player_death') => KillEvent | null) | ((hurt: RawHurt, eventType: 'player_hurt') => HurtEvent | null)

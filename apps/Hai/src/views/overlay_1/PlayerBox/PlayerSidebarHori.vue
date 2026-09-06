@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Player } from '@zhenhai/csgogsi';
+import type { Player } from '@zhenhai/csgogsi'
 
 const props = defineProps<{
   player: Player
@@ -7,8 +7,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="">
-  </div>
+  <div class=""></div>
 </template>
 
 <style scoped lang="scss"></style>

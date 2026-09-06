@@ -27,7 +27,6 @@ function handlePlayerContextMenu(player: PlayerRecord) {
   });
 }
 
-
 const filteredPlayers = computed(() =>
   playerItems.value.filter((player) => player.tournamentId === currentId.value),
 );
@@ -69,7 +68,6 @@ const columns: TableColumn<PlayerRecord>[] = [
     size: 100,
   },
 ];
-
 
 function handleEdit(player: PlayerRecord) {
   playerModalRef.value?.openEdit(player);
@@ -121,28 +119,46 @@ async function confirmDelete() {
     <div class="w-full h-(--ui-components-header-height) flex flex-row items-end">
       <div class="flex-1">
         <div class="text-xl font-semibold leading-6">Players</div>
-        <div class="text-[13px] leading-5 text-muted mt-1">Manage tournament players and rosters.</div>
+        <div class="text-[13px] leading-5 text-muted mt-1">
+          Manage tournament players and rosters.
+        </div>
       </div>
       <div class="flex items-end justify-end gap-3">
-        <UInput v-model="globalFilter" icon="i-lucide-search" placeholder="Search players..." class="w-64"
-          :ui="{ leadingIcon: 'text-muted' }" />
+        <UInput
+          v-model="globalFilter"
+          icon="i-lucide-search"
+          placeholder="Search players..."
+          class="w-64"
+          :ui="{ leadingIcon: 'text-muted' }"
+        />
         <PlayerModal ref="playerModalRef" />
       </div>
     </div>
 
     <!-- Table Container -->
     <div
-      class="flex-1 overflow-hidden mt-3 rounded-lg border border-default/40 bg-elevated/20 shadow-sm backdrop-blur-md">
-      <div v-if="filteredPlayers.length === 0" class="flex flex-col items-center justify-center h-full text-muted">
-        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-elevated/45 ring-1 ring-white/5 mb-3">
+      class="flex-1 overflow-hidden mt-3 rounded-lg border border-default/40 bg-elevated/20 shadow-sm backdrop-blur-md"
+    >
+      <div
+        v-if="filteredPlayers.length === 0"
+        class="flex flex-col items-center justify-center h-full text-muted"
+      >
+        <div
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-elevated/45 ring-1 ring-white/5 mb-3"
+        >
           <UIcon name="i-lucide-users" class="h-5 w-5 text-dimmed" />
         </div>
         <span class="text-sm font-medium">No players in this tournament yet.</span>
         <span class="text-xs text-dimmed mt-1">Click "Create Player" to add one.</span>
       </div>
 
-      <UTable v-else v-model:sorting="sorting" v-model:global-filter="globalFilter" :data="filteredPlayers"
-        :columns="columns" :ui="{
+      <UTable
+        v-else
+        v-model:sorting="sorting"
+        v-model:global-filter="globalFilter"
+        :data="filteredPlayers"
+        :columns="columns"
+        :ui="{
           wrapper: 'min-h-0',
           base: 'min-w-full',
           thead: 'bg-elevated/40 backdrop-blur-md',
@@ -150,39 +166,68 @@ async function confirmDelete() {
           td: 'px-4 py-3 text-sm border-b border-default/20 last:border-b-0',
           tr: 'group transition-colors duration-200 hover:bg-elevated/40 focus-within:bg-elevated/40',
           separator: 'z-0 opacity-0',
-        }">
+        }"
+      >
         <!-- Name  -->
         <template #playerName-header="{ column }">
-          <UButton color="neutral" variant="ghost" label="Name" size="xs" :icon="column.getIsSorted() === 'asc'
-            ? 'i-lucide-arrow-up-narrow-wide'
-            : column.getIsSorted() === 'desc'
-              ? 'i-lucide-arrow-down-wide-narrow'
-              : 'i-lucide-arrow-up-down'
-            " class="-mx-2.5" @click="column.toggleSorting(column.getIsSorted() === 'asc')" />
+          <UButton
+            color="neutral"
+            variant="ghost"
+            label="Name"
+            size="xs"
+            :icon="
+              column.getIsSorted() === 'asc'
+                ? 'i-lucide-arrow-up-narrow-wide'
+                : column.getIsSorted() === 'desc'
+                  ? 'i-lucide-arrow-down-wide-narrow'
+                  : 'i-lucide-arrow-up-down'
+            "
+            class="-mx-2.5"
+            @click="column.toggleSorting(column.getIsSorted() === 'asc')"
+          />
         </template>
 
         <template #playerSteamID-header="{ column }">
-          <UButton color="neutral" variant="ghost" label="Steam ID" size="xs" :icon="column.getIsSorted() === 'asc'
-            ? 'i-lucide-arrow-up-narrow-wide'
-            : column.getIsSorted() === 'desc'
-              ? 'i-lucide-arrow-down-wide-narrow'
-              : 'i-lucide-arrow-up-down'
-            " class="-mx-2.5" @click="column.toggleSorting(column.getIsSorted() === 'asc')" />
+          <UButton
+            color="neutral"
+            variant="ghost"
+            label="Steam ID"
+            size="xs"
+            :icon="
+              column.getIsSorted() === 'asc'
+                ? 'i-lucide-arrow-up-narrow-wide'
+                : column.getIsSorted() === 'desc'
+                  ? 'i-lucide-arrow-down-wide-narrow'
+                  : 'i-lucide-arrow-up-down'
+            "
+            class="-mx-2.5"
+            @click="column.toggleSorting(column.getIsSorted() === 'asc')"
+          />
         </template>
 
         <!-- Avatar Cell -->
         <template #playerAvatar-cell="{ row }">
-          <UAvatar v-if="row.original.playerAvatar" :src="getAssetUrl(row.original.playerAvatar)" size="md"
-            class="ring-1 ring-white/10 shadow-sm" />
-          <div v-else class="h-9 w-9 rounded-full bg-elevated flex items-center justify-center ring-1 ring-white/10">
+          <UAvatar
+            v-if="row.original.playerAvatar"
+            :src="getAssetUrl(row.original.playerAvatar)"
+            size="md"
+            class="ring-1 ring-white/10 shadow-sm"
+          />
+          <div
+            v-else
+            class="h-9 w-9 rounded-full bg-elevated flex items-center justify-center ring-1 ring-white/10"
+          >
             <UIcon name="i-lucide-user" class="h-4 w-4 text-muted" />
           </div>
         </template>
 
         <!-- Name Cell -->
         <template #playerName-cell="{ row }">
-          <span @contextmenu="handlePlayerContextMenu(row.original)" class="font-semibold text-foreground">{{
-            row.original.playerName }}</span>
+          <span
+            @contextmenu="handlePlayerContextMenu(row.original)"
+            class="font-semibold text-foreground"
+            >{{ row.original.playerName }}</span
+          >
         </template>
 
         <!-- Real Name Cell -->
@@ -205,14 +250,27 @@ async function confirmDelete() {
         <!-- Actions Cell -->
         <template #actions-cell="{ row }">
           <div
-            class="flex justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
+            class="flex justify-end gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
+          >
             <UTooltip text="Edit">
-              <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost"
-                @click="handleEdit(row.original)" aria-label="Edit" />
+              <UButton
+                icon="i-lucide-pencil"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                @click="handleEdit(row.original)"
+                aria-label="Edit"
+              />
             </UTooltip>
             <UTooltip text="Delete">
-              <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost"
-                @click="requestDelete(row.original)" aria-label="Delete" />
+              <UButton
+                icon="i-lucide-trash-2"
+                size="xs"
+                color="error"
+                variant="ghost"
+                @click="requestDelete(row.original)"
+                aria-label="Delete"
+              />
             </UTooltip>
           </div>
         </template>
@@ -220,9 +278,12 @@ async function confirmDelete() {
     </div>
 
     <!-- Delete Confirm Modal -->
-    <UModal v-model:open="showDeleteConfirm" title="Confirm Deletion"
+    <UModal
+      v-model:open="showDeleteConfirm"
+      title="Confirm Deletion"
       :description="`Are you sure you want to delete player ${deleteTarget?.playerName}? This action cannot be undone.`"
-      :ui="{ footer: 'justify-end' }">
+      :ui="{ footer: 'justify-end' }"
+    >
       <template #footer="{ close }">
         <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
         <UButton label="Delete" color="error" @click="confirmDelete" />
@@ -233,7 +294,6 @@ async function confirmDelete() {
 
 <style scoped lang="scss">
 @media (prefers-reduced-motion: reduce) {
-
   .group,
   .group * {
     transition: none !important;

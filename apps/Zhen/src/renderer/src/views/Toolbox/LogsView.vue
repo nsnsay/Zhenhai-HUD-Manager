@@ -75,8 +75,13 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="log-panel min-h-0 flex-1 overflow-hidden rounded-lg border border-default/40 bg-black/20 shadow-sm">
-      <div v-if="visibleLines.length > 0" class="h-full overflow-auto p-3 font-mono text-xs leading-5">
+    <div
+      class="log-panel min-h-0 flex-1 overflow-hidden rounded-lg border border-default/40 bg-black/20 shadow-sm"
+    >
+      <div
+        v-if="visibleLines.length > 0"
+        class="h-full overflow-auto p-3 font-mono text-xs leading-5"
+      >
         <div
           v-for="(line, index) in visibleLines"
           :key="`${index}-${line}`"

@@ -97,23 +97,37 @@ async function confirmDelete() {
 
     <!-- Teams Grid -->
     <div class="flex-1 overflow-auto mt-4">
-      <div v-if="filteredTeams.length === 0"
-        class="flex flex-col items-center justify-center rounded-lg border border-dashed border-default/40 bg-elevated/20 py-16 text-muted backdrop-blur-md">
-        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-elevated/45 ring-1 ring-white/5 mb-3">
+      <div
+        v-if="filteredTeams.length === 0"
+        class="flex flex-col items-center justify-center rounded-lg border border-dashed border-default/40 bg-elevated/20 py-16 text-muted backdrop-blur-md"
+      >
+        <div
+          class="flex h-12 w-12 items-center justify-center rounded-full bg-elevated/45 ring-1 ring-white/5 mb-3"
+        >
           <UIcon name="i-lucide-users" class="h-5 w-5" />
         </div>
         <span class="text-sm font-medium text-muted">No teams in this tournament yet.</span>
       </div>
 
       <div v-else class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
-        <div v-for="team in filteredTeams" :key="team.id" @contextmenu="handleTeamContextMenu(team)"
-          class="group relative min-w-0 overflow-hidden rounded-lg border border-default/40 bg-elevated/35 p-4 shadow-sm backdrop-blur-xl transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-default/70 hover:shadow-lg">
+        <div
+          v-for="team in filteredTeams"
+          :key="team.id"
+          @contextmenu="handleTeamContextMenu(team)"
+          class="group relative min-w-0 overflow-hidden rounded-lg border border-default/40 bg-elevated/35 p-4 shadow-sm backdrop-blur-xl transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-default/70 hover:shadow-lg"
+        >
           <!-- Team Header -->
           <div class="flex items-center gap-3 mb-3">
-            <UAvatar class="rounded-lg bg-zinc-800/80 ring-1 ring-white/10 p-1" size="xl" v-if="team.teamLogo"
-              :src="getAssetUrl(team.teamLogo)" />
-            <div v-else
-              class="h-12 w-12 rounded-lg bg-zinc-800/80 ring-1 ring-white/10 flex items-center justify-center">
+            <UAvatar
+              class="rounded-lg bg-zinc-800/80 ring-1 ring-white/10 p-1"
+              size="xl"
+              v-if="team.teamLogo"
+              :src="getAssetUrl(team.teamLogo)"
+            />
+            <div
+              v-else
+              class="h-12 w-12 rounded-lg bg-zinc-800/80 ring-1 ring-white/10 flex items-center justify-center"
+            >
               <UIcon name="i-lucide-users" class="text-muted" />
             </div>
 
@@ -123,9 +137,22 @@ async function confirmDelete() {
             </div>
 
             <div
-              class="flex gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-              <UButton @click="handleEdit(team)" icon="i-lucide-pencil" size="xs" variant="ghost" color="neutral" />
-              <UButton @click="requestDelete(team)" icon="i-lucide-trash-2" size="xs" variant="ghost" color="error" />
+              class="flex gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
+            >
+              <UButton
+                @click="handleEdit(team)"
+                icon="i-lucide-pencil"
+                size="xs"
+                variant="ghost"
+                color="neutral"
+              />
+              <UButton
+                @click="requestDelete(team)"
+                icon="i-lucide-trash-2"
+                size="xs"
+                variant="ghost"
+                color="error"
+              />
             </div>
           </div>
 
@@ -140,11 +167,17 @@ async function confirmDelete() {
           <!-- Players List -->
           <div class="space-y-1 mt-2">
             <template v-if="team.playerIds && team.playerIds.length > 0">
-              <div v-for="playerId in team.playerIds" :key="playerId"
-                class="flex items-center gap-2.5 rounded-lg px-2 py-1.5 ring-1 ring-transparent transition-colors duration-200 hover:bg-elevated/60 hover:ring-white/5">
+              <div
+                v-for="playerId in team.playerIds"
+                :key="playerId"
+                class="flex items-center gap-2.5 rounded-lg px-2 py-1.5 ring-1 ring-transparent transition-colors duration-200 hover:bg-elevated/60 hover:ring-white/5"
+              >
                 <template v-if="getPlayerById(playerId)">
-                  <UAvatar size="xs" :src="getAssetUrl(getPlayerById(playerId)?.playerAvatar || '')"
-                    class="ring-1 ring-white/10" />
+                  <UAvatar
+                    size="xs"
+                    :src="getAssetUrl(getPlayerById(playerId)?.playerAvatar || '')"
+                    class="ring-1 ring-white/10"
+                  />
                   <span class="text-[13px] font-medium truncate">
                     {{ getPlayerById(playerId)?.playerName }}
                   </span>
@@ -158,15 +191,20 @@ async function confirmDelete() {
               </div>
             </template>
 
-            <div v-else class="rounded-lg bg-elevated/20 px-3 py-2 text-xs italic text-dimmed">No players assigned</div>
+            <div v-else class="rounded-lg bg-elevated/20 px-3 py-2 text-xs italic text-dimmed">
+              No players assigned
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <UModal v-model:open="showDeleteConfirm" title="Confirm Deletion"
+    <UModal
+      v-model:open="showDeleteConfirm"
+      title="Confirm Deletion"
       :description="`Are you sure you want to delete team ${deleteTarget?.teamName}? This action cannot be undone.`"
-      :ui="{ footer: 'justify-end' }">
+      :ui="{ footer: 'justify-end' }"
+    >
       <template #footer="{ close }">
         <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
         <UButton label="Delete" color="error" @click="confirmDelete" />
@@ -177,7 +215,6 @@ async function confirmDelete() {
 
 <style scoped lang="scss">
 @media (prefers-reduced-motion: reduce) {
-
   .group,
   .group * {
     transition: none !important;

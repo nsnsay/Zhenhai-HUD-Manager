@@ -35,7 +35,10 @@ const { damageAmount, damageVisible } = useRecentDamage(() => props.player)
 </script>
 
 <template>
-  <div class="avatar" :class="[customClassName, size, { 'grayscale-100 duration-400 transition': player.isDead }]">
+  <div
+    class="avatar"
+    :class="[customClassName, size, { 'grayscale-100 duration-400 transition': player.isDead }]"
+  >
     <img class="avatar-img" :class="[size]" :src="avatar" alt="" />
     <Transition name="avatar-damage">
       <span v-if="damageVisible && damageAmount > 0" class="avatar-damage-label">
@@ -112,7 +115,6 @@ const { damageAmount, damageVisible } = useRecentDamage(() => props.player)
   }
 
   @media (prefers-reduced-motion: reduce) {
-
     .avatar-damage-enter-active,
     .avatar-damage-leave-active {
       transition: opacity 100ms ease !important;

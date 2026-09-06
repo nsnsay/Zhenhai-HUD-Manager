@@ -153,11 +153,7 @@ async function handleSubmit(close: () => void) {
       const ext = file.name.split(".").pop() || "png";
       const fileName = `${crypto.randomUUID()}-${Date.now()}.${ext}`;
 
-      const saveResult = await window.api.file.save(
-        base64,
-        fileName,
-        "tournament-logos"
-      );
+      const saveResult = await window.api.file.save(base64, fileName, "tournament-logos");
 
       if (saveResult.success) {
         logoPath = saveResult.data ?? logoPath;
@@ -182,10 +178,14 @@ async function handleSubmit(close: () => void) {
     }
 
     if (result.success) {
-      rendererLogger.info("TournamentModal", editId.value ? "Tournament updated" : "Tournament created", {
-        id: result.data?.id ?? editId.value,
-        name: tournamentData.value.tournamentName,
-      });
+      rendererLogger.info(
+        "TournamentModal",
+        editId.value ? "Tournament updated" : "Tournament created",
+        {
+          id: result.data?.id ?? editId.value,
+          name: tournamentData.value.tournamentName,
+        },
+      );
       toast.add({
         title: editId.value ? "Tournament Updated" : "Tournament Created",
         description: `"${tournamentData.value.tournamentName}" has been saved successfully.`,
@@ -213,36 +213,66 @@ async function handleSubmit(close: () => void) {
 </script>
 
 <template>
-  <UModal v-model:open="open" :title="editId ? 'Edit Tournament' : 'Create Tournament'"
+  <UModal
+    v-model:open="open"
+    :title="editId ? 'Edit Tournament' : 'Create Tournament'"
     :description="editId ? 'Update tournament information' : 'Tournament Name, Logo, Info'"
-    :ui="{ footer: 'justify-end', content: 'min-w-120' }">
+    :ui="{ footer: 'justify-end', content: 'min-w-120' }"
+  >
     <template #body>
       <UFormField label="Tournament Name" name="tournamentName" required>
-        <UInput v-model="tournamentData.tournamentName" placeholder="e.g. ESL Pro League Season 20" class="w-full" />
+        <UInput
+          v-model="tournamentData.tournamentName"
+          placeholder="e.g. ESL Pro League Season 20"
+          class="w-full"
+        />
       </UFormField>
 
       <UFormField label="Description" name="tournamentDescription" hint="Optional">
-        <UTextarea v-model="tournamentData.tournamentDescription" placeholder="Tournament description..." class="w-full"
-          :rows="3" />
+        <UTextarea
+          v-model="tournamentData.tournamentDescription"
+          placeholder="Tournament description..."
+          class="w-full"
+          :rows="3"
+        />
       </UFormField>
 
       <UFormField label="Tournament Logo" name="tournamentLogo">
-        <UFileUpload v-model="logoFile" accept="image/*" label="Drop your image here"
-          description="SVG, PNG, JPG, WEBP (max. 16MB)" class="w-full" />
+        <UFileUpload
+          v-model="logoFile"
+          accept="image/*"
+          label="Drop your image here"
+          description="SVG, PNG, JPG, WEBP (max. 16MB)"
+          class="w-full"
+        />
       </UFormField>
 
       <div v-if="displayPreview" class="flex items-center gap-3 mt-2">
-        <img :src="displayPreview" alt="Tournament Logo" class="h-16 w-16 rounded object-cover border border-default" />
+        <img
+          :src="displayPreview"
+          alt="Tournament Logo"
+          class="h-16 w-16 rounded object-cover border border-default"
+        />
 
-        <UButton label="Remove Logo" color="neutral" variant="outline" size="xs" icon="i-lucide-trash-2"
-          @click="removeLogo" />
+        <UButton
+          label="Remove Logo"
+          color="neutral"
+          variant="outline"
+          size="xs"
+          icon="i-lucide-trash-2"
+          @click="removeLogo"
+        />
       </div>
     </template>
 
     <template #footer="{ close }">
       <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-      <UButton :label="editId ? 'Update' : 'Submit'" color="primary" :loading="isSubmitting"
-        @click="handleSubmit(close)" />
+      <UButton
+        :label="editId ? 'Update' : 'Submit'"
+        color="primary"
+        :loading="isSubmitting"
+        @click="handleSubmit(close)"
+      />
     </template>
   </UModal>
 </template>

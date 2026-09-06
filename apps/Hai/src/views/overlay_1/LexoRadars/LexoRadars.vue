@@ -137,11 +137,13 @@ const grenadesExtended = computed<RadarGrenadeObject[]>(() => {
   return raw.flatMap((grenade) => {
     const side = ownerSideMap.get(grenade.owner) ?? 'CT'
 
-    return extendGrenade({
-      grenade,
-      side,
-      mapName: mapName.value,
-    }) ?? []
+    return (
+      extendGrenade({
+        grenade,
+        side,
+        mapName: mapName.value,
+      }) ?? []
+    )
   })
 })
 
@@ -259,11 +261,9 @@ const grenadeClasses = (grenade: RadarGrenadeObject) => {
 }
 
 const grenadeStyle = (grenade: RadarGrenadeObject) => ({
-  transform: `translateX(${(grenade.position[0] ?? 0).toFixed(
-    2,
-  )}px) translateY(${(grenade.position[1] ?? 0).toFixed(
-    2,
-  )}px) translateZ(10px) scale(${reverseZoom.value})`,
+  transform: `translateX(${(grenade.position[0] ?? 0).toFixed(2)}px) translateY(${(
+    grenade.position[1] ?? 0
+  ).toFixed(2)}px) translateZ(10px) scale(${reverseZoom.value})`,
 })
 
 const bombRenderable = computed(() => {
@@ -299,9 +299,7 @@ const bombElements = computed<BombElement[]>(() => {
         key: 'bomb_single',
         class: `bomb ${bomb.state} visible`,
         style: {
-          transform: `translateX(${(pos[0] ?? 0).toFixed(
-            2,
-          )}px) translateY(${(pos[1] ?? 0).toFixed(
+          transform: `translateX(${(pos[0] ?? 0).toFixed(2)}px) translateY(${(pos[1] ?? 0).toFixed(
             2,
           )}px) translateZ(10px) scale(${reverseZoom.value})`,
         },
@@ -316,12 +314,9 @@ const bombElements = computed<BombElement[]>(() => {
 
     return {
       key: `bomb_${cfg.id}`,
-      class: `bomb ${bomb.state} ${cfg.isVisible(bomb.position[2] ?? 0) ? 'visible' : 'hidden'
-        }`,
+      class: `bomb ${bomb.state} ${cfg.isVisible(bomb.position[2] ?? 0) ? 'visible' : 'hidden'}`,
       style: {
-        transform: `translateX(${(pos[0] ?? 0).toFixed(
-          2,
-        )}px) translateY(${(pos[1] ?? 0).toFixed(
+        transform: `translateX(${(pos[0] ?? 0).toFixed(2)}px) translateY(${(pos[1] ?? 0).toFixed(
           2,
         )}px) translateZ(10px) scale(${reverseZoom.value})`,
       },
@@ -339,21 +334,34 @@ const bombElements = computed<BombElement[]>(() => {
         <template v-if="isSupportedMap">
           <div class="map" :style="mapStyle">
             <!-- Players -->
-            <div v-for="player in playersExtended" :key="player.id" :class="playerClasses(player)"
-              :style="playerStyle(player)" v-bind="teamAttrs(player.team.side)">
+            <div
+              v-for="player in playersExtended"
+              :key="player.id"
+              :class="playerClasses(player)"
+              :style="playerStyle(player)"
+              v-bind="teamAttrs(player.team.side)"
+            >
               <div class="content" :style="playerContentStyle(player)">
-                <div class="background-fire" :style="{
-                  transform: `rotate(${-90 + (player.position[2] ?? 0)}deg)`,
-                  opacity: isShootingNow(player.lastShoot) ? 1 : 0,
-                }">
+                <div
+                  class="background-fire"
+                  :style="{
+                    transform: `rotate(${-90 + (player.position[2] ?? 0)}deg)`,
+                    opacity: isShootingNow(player.lastShoot) ? 1 : 0,
+                  }"
+                >
                   <div class="bg" />
                 </div>
 
-                <div class="background" :style="!player.isAlive
-                  ? {}
-                  : {
-                    transform: `rotate(${0 + (player.position[2] ?? 0)}deg) scale(${player.isActive ? 2.6 : 2.2}) translate(0)`
-                  }" />
+                <div
+                  class="background"
+                  :style="
+                    !player.isAlive
+                      ? {}
+                      : {
+                          transform: `rotate(${0 + (player.position[2] ?? 0)}deg) scale(${player.isActive ? 2.6 : 2.2}) translate(0)`,
+                        }
+                  "
+                />
 
                 <div class="label">
                   {{ player.observer_slot }}
@@ -362,16 +370,24 @@ const bombElements = computed<BombElement[]>(() => {
             </div>
 
             <!-- Grenades -->
-            <div v-for="grenade in grenadesRenderable" :key="grenade.id" :class="grenadeClasses(grenade)"
-              :style="grenadeStyle(grenade)">
-              <div class="content" :style="grenade.type === 'smoke' &&
-                (grenade.state === 'landed' || grenade.state === 'exploded')
-                ? {
-                  width: `${config.smokeSize}px`,
-                  height: `${config.smokeSize}px`,
-                }
-                : {}
-                ">
+            <div
+              v-for="grenade in grenadesRenderable"
+              :key="grenade.id"
+              :class="grenadeClasses(grenade)"
+              :style="grenadeStyle(grenade)"
+            >
+              <div
+                class="content"
+                :style="
+                  grenade.type === 'smoke' &&
+                  (grenade.state === 'landed' || grenade.state === 'exploded')
+                    ? {
+                        width: `${config.smokeSize}px`,
+                        height: `${config.smokeSize}px`,
+                      }
+                    : {}
+                "
+              >
                 <div class="explode-point" />
                 <div class="background" />
               </div>
@@ -379,7 +395,12 @@ const bombElements = computed<BombElement[]>(() => {
 
             <!-- Bomb -->
             <template v-if="bombRenderable">
-              <div v-for="bombEl in bombElements" :key="bombEl.key" :class="bombEl.class" :style="bombEl.style">
+              <div
+                v-for="bombEl in bombElements"
+                :key="bombEl.key"
+                :class="bombEl.class"
+                :style="bombEl.style"
+              >
                 <div class="content">
                   <div class="explode-point" />
                   <div class="background" />
@@ -390,13 +411,16 @@ const bombElements = computed<BombElement[]>(() => {
         </template>
 
         <template v-else>
-          <div class="map" style="
+          <div
+            class="map"
+            style="
               width: 1024px;
               height: 1024px;
               display: flex;
               align-items: center;
               justify-content: center;
-            ">
+            "
+          >
             Unsupported map
           </div>
         </template>
@@ -410,7 +434,9 @@ const bombElements = computed<BombElement[]>(() => {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .fade-enter-from,
@@ -435,6 +461,5 @@ const bombElements = computed<BombElement[]>(() => {
     overflow: hidden;
     transform: scale(1);
   }
-
 }
 </style>

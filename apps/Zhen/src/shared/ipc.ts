@@ -83,7 +83,10 @@ export interface WindowAPI {
   onOverlayLifecycle: (callback: (state: string) => void) => () => void;
 
   db: {
-    create: (collection: CollectionName, data: Record<string, unknown>) => Promise<CrudResult<DatabaseRecord>>;
+    create: (
+      collection: CollectionName,
+      data: Record<string, unknown>,
+    ) => Promise<CrudResult<DatabaseRecord>>;
     read: (collection: CollectionName, id: string) => Promise<CrudResult<DatabaseRecord>>;
     list: (
       collection: CollectionName,

@@ -8,11 +8,7 @@ import { useMatchsStore } from "@renderer/stores/useMatchsStore";
 import { useCurrentTournament } from "@renderer/stores/useCurrentTournament";
 import { useGsiStore } from "@zhenhai/csgogsi/gsi-vue";
 import { getAssetUrl } from "@renderer/utils/assets-url";
-import type {
-  MapPickDecider,
-  MapPickVeto,
-  MapVeto,
-} from "@zhenhai/csgogsi/types";
+import type { MapPickDecider, MapPickVeto, MapVeto } from "@zhenhai/csgogsi/types";
 
 const mapBackgrounds = import.meta.glob("../../assets/background/*.png", {
   eager: true,
@@ -38,12 +34,8 @@ const overviewStats = computed(() => {
   const currentPlayers = playerItems.value.filter(
     (player) => player.tournamentId === currentId.value,
   );
-  const currentTeams = teamItems.value.filter(
-    (team) => team.tournamentId === currentId.value,
-  );
-  const currentMatchs = matchItems.value.filter(
-    (match) => match.tournamentId === currentId.value,
-  );
+  const currentTeams = teamItems.value.filter((team) => team.tournamentId === currentId.value);
+  const currentMatchs = matchItems.value.filter((match) => match.tournamentId === currentId.value);
 
   return [
     {
@@ -77,9 +69,7 @@ const overviewStats = computed(() => {
   ];
 });
 
-const liveMatch = computed(() =>
-  matchItems.value.find((match) => match.isLive === true),
-);
+const liveMatch = computed(() => matchItems.value.find((match) => match.isLive === true));
 
 const liveMatchId = computed(() => liveMatch.value?.id ?? "");
 
@@ -98,8 +88,8 @@ function isSelectedMap(veto: MapVeto): veto is MapPickVeto | MapPickDecider {
   return veto.mapVetoType === "pick" || veto.mapVetoType === "decider";
 }
 
-const selectedMaps = computed<(MapPickVeto | MapPickDecider)[]>(() =>
-  liveMatch.value?.matchVeto.filter(isSelectedMap) ?? [],
+const selectedMaps = computed<(MapPickVeto | MapPickDecider)[]>(
+  () => liveMatch.value?.matchVeto.filter(isSelectedMap) ?? [],
 );
 
 function extractMapName(value: string): string {
@@ -109,9 +99,7 @@ function extractMapName(value: string): string {
 
 function getMapBackground(mapName: string): string {
   const name = extractMapName(mapName);
-  const entry = Object.entries(mapBackgrounds).find(([path]) =>
-    path.includes(`${name}.png`),
-  );
+  const entry = Object.entries(mapBackgrounds).find(([path]) => path.includes(`${name}.png`));
   return entry?.[1] ?? "";
 }
 
@@ -192,10 +180,15 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
     </header>
 
     <TransitionGroup tag="div" name="overview-stat" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <UCard v-for="(stat, index) in overviewStats" :key="stat.key" :style="{ '--stat-index': index }" :ui="{
-        root: 'rounded-lg border border-default/40 bg-elevated/30 shadow-sm backdrop-blur-xl',
-        body: 'p-0 sm:p-0',
-      }">
+      <UCard
+        v-for="(stat, index) in overviewStats"
+        :key="stat.key"
+        :style="{ '--stat-index': index }"
+        :ui="{
+          root: 'rounded-lg border border-default/40 bg-elevated/30 shadow-sm backdrop-blur-xl',
+          body: 'p-0 sm:p-0',
+        }"
+      >
         <div class="flex items-center justify-between gap-3 p-4">
           <div class="min-w-0">
             <div class="truncate text-[13px] font-medium text-muted">{{ stat.label }}</div>
@@ -203,7 +196,8 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
             <div class="mt-1 text-xs text-dimmed">{{ stat.hint }}</div>
           </div>
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-elevated/70 text-primary ring-1 ring-white/5">
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-elevated/70 text-primary ring-1 ring-white/5"
+          >
             <UIcon :name="stat.icon" class="h-5 w-5" />
           </div>
         </div>
@@ -211,10 +205,12 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
     </TransitionGroup>
 
     <section
-      class="relative overflow-hidden rounded-lg border border-white/5 bg-elevated/25 shadow-lg backdrop-blur-2xl">
+      class="relative overflow-hidden rounded-lg border border-white/5 bg-elevated/25 shadow-lg backdrop-blur-2xl"
+    >
       <div
         class="map-hero absolute inset-0 bg-cover bg-center transition-[transform,filter,opacity] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
-        :style="heroBackground ? { backgroundImage: `url(${heroBackground})` } : {}" />
+        :style="heroBackground ? { backgroundImage: `url(${heroBackground})` } : {}"
+      />
       <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/15" />
 
       <div class="relative grid min-h-64 gap-5 p-5 lg:grid-cols-[1.35fr_1fr] lg:p-7">
@@ -228,27 +224,46 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
             <div v-if="liveMatch" class="mt-3 space-y-3">
               <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
                 <div class="flex min-w-0 items-center gap-2.5">
-                  <UAvatar :src="teamLogo(liveMatch.matchTeamA)" size="md" class="bg-black/20 ring-1 ring-white/20" />
+                  <UAvatar
+                    :src="teamLogo(liveMatch.matchTeamA)"
+                    size="md"
+                    class="bg-black/20 ring-1 ring-white/20"
+                  />
                   <span class="truncate text-lg font-semibold text-white">
                     {{ teamName(liveMatch.matchTeamA) }}
                   </span>
                 </div>
                 <span class="text-xl font-semibold text-white/70">
-                  {{ liveMatch.matchTeamAScore }} &nbsp; &nbsp;&nbsp;&nbsp;{{ liveMatch.matchTeamBScore }}
+                  {{ liveMatch.matchTeamAScore }} &nbsp; &nbsp;&nbsp;&nbsp;{{
+                    liveMatch.matchTeamBScore
+                  }}
                 </span>
                 <div class="flex min-w-0 items-center gap-2.5">
                   <span class="truncate text-lg font-semibold text-white">
                     {{ teamName(liveMatch.matchTeamB) }}
                   </span>
-                  <UAvatar :src="teamLogo(liveMatch.matchTeamB)" size="md" class="bg-black/20 ring-1 ring-white/20" />
+                  <UAvatar
+                    :src="teamLogo(liveMatch.matchTeamB)"
+                    size="md"
+                    class="bg-black/20 ring-1 ring-white/20"
+                  />
                 </div>
               </div>
 
               <div class="flex flex-wrap gap-2">
-                <UBadge v-if="liveMatch.matchType" color="neutral" variant="outline" icon="i-lucide-flag"
-                  :label="liveMatch.matchType" />
-                <UBadge color="neutral" variant="outline" icon="i-lucide-shuffle"
-                  :label="`BO${liveMatch.matchLength}`" />
+                <UBadge
+                  v-if="liveMatch.matchType"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-flag"
+                  :label="liveMatch.matchType"
+                />
+                <UBadge
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-shuffle"
+                  :label="`BO${liveMatch.matchLength}`"
+                />
               </div>
             </div>
 
@@ -277,7 +292,10 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
         </div>
 
         <div class="flex flex-col justify-between gap-4">
-          <div v-if="gsiTeamScore" class="rounded-lg bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-xl">
+          <div
+            v-if="gsiTeamScore"
+            class="rounded-lg bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-xl"
+          >
             <div class="flex items-center justify-between">
               <div class="text-sm font-semibold text-white">{{ gsiTeamLabel("CT") }}</div>
               <span class="font-mono text-2xl font-semibold text-white">{{ gsiTeamScore.ct }}</span>
@@ -289,7 +307,10 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
             </div>
           </div>
 
-          <div v-if="gsiData" class="rounded-lg bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-xl">
+          <div
+            v-if="gsiData"
+            class="rounded-lg bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-xl"
+          >
             <div class="flex items-center justify-between text-sm">
               <span class="text-white/70">Players</span>
               <span class="font-semibold text-white">{{ gsiPlayerCount }}</span>
@@ -311,12 +332,23 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
         <h2 class="text-base font-semibold">Selected maps</h2>
       </div>
 
-      <div v-if="selectedMaps.length > 0" class="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-        <div v-for="(map, index) in selectedMaps" :key="`${map.mapName}-${index}`"
-          class="group relative min-h-24 overflow-hidden rounded-lg border border-white/5 shadow-sm">
+      <div
+        v-if="selectedMaps.length > 0"
+        class="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4"
+      >
+        <div
+          v-for="(map, index) in selectedMaps"
+          :key="`${map.mapName}-${index}`"
+          class="group relative min-h-24 overflow-hidden rounded-lg border border-white/5 shadow-sm"
+        >
           <div
             class="absolute inset-0 scale-105 bg-cover bg-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110"
-            :style="getMapBackground(map.mapName) ? { backgroundImage: `url(${getMapBackground(map.mapName)})` } : {}" />
+            :style="
+              getMapBackground(map.mapName)
+                ? { backgroundImage: `url(${getMapBackground(map.mapName)})` }
+                : {}
+            "
+          />
           <div class="absolute inset-0 bg-black/45" />
           <div class="relative flex h-full min-h-24 flex-col justify-end p-3">
             <div class="truncate text-sm font-semibold capitalize text-white">
@@ -327,8 +359,10 @@ function mapVetoLabel(veto: MapPickVeto | MapPickDecider): string {
         </div>
       </div>
 
-      <div v-else
-        class="rounded-lg border border-dashed border-default/40 bg-elevated/20 px-5 py-8 text-center text-sm text-muted">
+      <div
+        v-else
+        class="rounded-lg border border-dashed border-default/40 bg-elevated/20 px-5 py-8 text-center text-sm text-muted"
+      >
         {{ liveMatch ? "No Decider map" : "Start a live match to preview its selected maps." }}
       </div>
     </section>

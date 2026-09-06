@@ -56,7 +56,6 @@
 }
 
 .map {
-
   .player,
   .grenade,
   .bomb {
@@ -192,13 +191,11 @@
     z-index: 2;
   }
 
-
   .label {
     width: 100%;
     height: 100%;
     background: var(--main-90);
   }
-
 }
 
 /*
@@ -289,7 +286,6 @@
 }
 
 .grenade {
-
   &.flashbang.exploded,
   &.frag.exploded {
     .explode-point {
@@ -312,7 +308,6 @@
       border: 5px solid var(--main-100);
       background-color: rgba(255, 255, 255, 0.5);
     }
-
   }
 
   &.firebomb {
@@ -369,7 +364,6 @@
     transition: background-color 0.5s;
     -webkit-font-smoothing: crisp-edges;
     font-size: 38px;
-
   }
 }
 
@@ -385,7 +379,6 @@
 }
 
 .bomb {
-
   &.planted,
   &.defusing {
     .explode-point {
@@ -407,12 +400,9 @@
 }
 
 .player {
-
   .label {
     background: var(--main-90);
   }
-
-
 
   &.T.hasBomb {
     .label {
@@ -447,7 +437,6 @@
 
 .grenade {
   &.smoke {
-
     &.exploded,
     &.landed {
       .background {

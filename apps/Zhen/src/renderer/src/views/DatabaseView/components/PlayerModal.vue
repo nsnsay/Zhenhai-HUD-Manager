@@ -231,9 +231,12 @@ async function handleSubmit(close: () => void) {
 </script>
 
 <template>
-  <UModal v-model:open="open" :title="editId ? 'Edit Player' : 'Create Player'"
+  <UModal
+    v-model:open="open"
+    :title="editId ? 'Edit Player' : 'Create Player'"
     :description="editId ? 'Update player information' : 'Player Name, Avatar, Steam ID'"
-    :ui="{ footer: 'justify-end', content: 'min-w-120', body: 'flex flex-col gap-2' }">
+    :ui="{ footer: 'justify-end', content: 'min-w-120', body: 'flex flex-col gap-2' }"
+  >
     <UButton icon="i-lucide-plus" label="Create Player" color="primary" />
     <template #body>
       <div class="flex justify-between w-full">
@@ -241,36 +244,67 @@ async function handleSubmit(close: () => void) {
           <UInput v-model="playerData.playerName" placeholder="e.g. ZywOo" class="w-48" />
         </UFormField>
         <UFormField label="Real Name" name="playerRealName" hint="Optional">
-          <UInput v-model="playerData.playerRealName" placeholder="e.g. Mathieu Herbaut" class="w-48" />
+          <UInput
+            v-model="playerData.playerRealName"
+            placeholder="e.g. Mathieu Herbaut"
+            class="w-48"
+          />
         </UFormField>
       </div>
       <div class="flex justify-between w-full">
         <UFormField label="Steam ID (64)" name="playerSteamID" required>
-          <UInput v-model="playerData.playerSteamID" placeholder="e.g. 76561198012345678" class="w-48" />
+          <UInput
+            v-model="playerData.playerSteamID"
+            placeholder="e.g. 76561198012345678"
+            class="w-48"
+          />
         </UFormField>
         <UFormField label="Country / Region" name="playerCountry" hint="Optional">
-          <USelect v-model="playerData.playerCountry" :items="countryItems" value-key="value" class="w-48" :ui="{
-            trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-          }" />
+          <USelect
+            v-model="playerData.playerCountry"
+            :items="countryItems"
+            value-key="value"
+            class="w-48"
+            :ui="{
+              trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
+            }"
+          />
         </UFormField>
       </div>
       <div class="flex justify-between w-full">
         <UFormField label="Camera URL" name="cameraURL" hint="Optional">
-          <UInput v-model="playerData.playerCameraURL" placeholder="e.g. http://localhost:3000/1000.flv" class="w-48" />
+          <UInput
+            v-model="playerData.playerCameraURL"
+            placeholder="e.g. http://localhost:3000/1000.flv"
+            class="w-48"
+          />
         </UFormField>
       </div>
       <UFormField label="Avatar" name="Player Avatar" hint="Optional">
-        <UFileUpload v-model="avatarFile" accept="image/*" class="w-full h-32" label="Drop your image here"
-          description="SVG, PNG, JPG, WEBP (max. 16MB)" />
+        <UFileUpload
+          v-model="avatarFile"
+          accept="image/*"
+          class="w-full h-32"
+          label="Drop your image here"
+          description="SVG, PNG, JPG, WEBP (max. 16MB)"
+        />
       </UFormField>
       <div v-if="displayPreview" class="flex items-center gap-3 mt-2">
-        <img :src="displayPreview" alt="Avatar" class="h-16 w-16 rounded-full object-cover border border-default" />
+        <img
+          :src="displayPreview"
+          alt="Avatar"
+          class="h-16 w-16 rounded-full object-cover border border-default"
+        />
       </div>
     </template>
     <template #footer="{ close }">
       <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-      <UButton :label="editId ? 'Update' : 'Submit'" color="neutral" :loading="isSubmitting"
-        @click="handleSubmit(close)" />
+      <UButton
+        :label="editId ? 'Update' : 'Submit'"
+        color="neutral"
+        :loading="isSubmitting"
+        @click="handleSubmit(close)"
+      />
     </template>
   </UModal>
 </template>

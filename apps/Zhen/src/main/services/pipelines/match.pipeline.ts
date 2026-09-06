@@ -51,10 +51,9 @@ function createMatchEnricher(dbService: DatabaseService): GsiMiddleware {
   return (data: CSGO) => {
     if (!data) return data;
 
-    
     const result = dbService.list("matchs");
     if (!result.success || !result.data) {
-      data.matchinfo = undefined; 
+      data.matchinfo = undefined;
       return data;
     }
 
@@ -68,9 +67,7 @@ function createMatchEnricher(dbService: DatabaseService): GsiMiddleware {
 
       const teamResult = dbService.list("teams");
       const dbTeams =
-        teamResult.success && teamResult.data
-          ? (teamResult.data as unknown as DbTeam[])
-          : [];
+        teamResult.success && teamResult.data ? (teamResult.data as unknown as DbTeam[]) : [];
 
       if (liveMatch.tournamentId) {
         const tournamentResult = dbService.list("tournaments");
@@ -78,9 +75,7 @@ function createMatchEnricher(dbService: DatabaseService): GsiMiddleware {
           tournamentResult.success && tournamentResult.data
             ? (tournamentResult.data as unknown as DbTournament[])
             : [];
-        const dbTournament = tournaments.find(
-          (item) => item.id === liveMatch.tournamentId,
-        );
+        const dbTournament = tournaments.find((item) => item.id === liveMatch.tournamentId);
 
         if (dbTournament) {
           tournament = {
@@ -110,7 +105,7 @@ function createMatchEnricher(dbService: DatabaseService): GsiMiddleware {
         teamB,
       };
     } else {
-      data.matchinfo = undefined; 
+      data.matchinfo = undefined;
     }
 
     return data;

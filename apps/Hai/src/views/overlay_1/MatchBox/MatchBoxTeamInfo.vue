@@ -254,20 +254,14 @@ function ensureRaf(): void {
 }
 
 function stopRafIfIdle(): void {
-  if (
-    rafId !== null &&
-    !ct.active &&
-    (t.mode === 'idle' || tBarController.isTransitioning())
-  ) {
+  if (rafId !== null && !ct.active && (t.mode === 'idle' || tBarController.isTransitioning())) {
     cancelAnimationFrame(rafId)
     rafId = null
   }
 }
 
 function getDefuseMaxTime(player: Player): number {
-  return player.state.defusekit
-    ? MAX_TIMER.defuse_kit
-    : MAX_TIMER.defuse_nokit
+  return player.state.defusekit ? MAX_TIMER.defuse_kit : MAX_TIMER.defuse_nokit
 }
 
 function getInitialDefuseSeconds(maxTime: number): number {
@@ -301,11 +295,7 @@ function resetCtProgress(): void {
   stopRafIfIdle()
 }
 
-function startTCountdown(
-  mode: TProgressMode,
-  seconds: number,
-  animate = false,
-): void {
+function startTCountdown(mode: TProgressMode, seconds: number, animate = false): void {
   tBarController.clearTransition()
 
   t.mode = mode
@@ -318,8 +308,7 @@ function startTCountdown(
    * 过渡结束后再开始炸弹爆炸倒计时。
    */
   if (animate && tBar.value) {
-    t.endTime =
-      performance.now() + (seconds + PROGRESS_DURATION / 1000) * 1000
+    t.endTime = performance.now() + (seconds + PROGRESS_DURATION / 1000) * 1000
 
     tBarController.animateToFull(() => {
       if (t.mode === mode) {
@@ -375,10 +364,7 @@ function calibrateCt(phase?: PhaseSnapshot): void {
     return
   }
 
-  const currentRemaining = Math.max(
-    0,
-    (ct.endTime - performance.now()) / 1000,
-  )
+  const currentRemaining = Math.max(0, (ct.endTime - performance.now()) / 1000)
 
   if (Math.abs(currentRemaining - seconds) >= CT_CALIBRATION_THRESHOLD) {
     ct.endTime = performance.now() + seconds * 1000
@@ -407,10 +393,7 @@ function calibrateT(phase?: PhaseSnapshot): void {
     return
   }
 
-  const currentRemaining = Math.max(
-    0,
-    (t.endTime - performance.now()) / 1000,
-  )
+  const currentRemaining = Math.max(0, (t.endTime - performance.now()) / 1000)
 
   if (Math.abs(currentRemaining - seconds) >= T_CALIBRATION_THRESHOLD) {
     t.endTime = performance.now() + seconds * 1000
@@ -555,9 +538,7 @@ useGsiEvent('bombExplode', () => {
   if (isDefuseActive) {
     const rawSeconds = Number(gsi.data?.phase_countdowns?.phase_ends_in ?? 0)
 
-    defuseSecondsLeft.value = Number.isFinite(rawSeconds)
-      ? Math.max(0, rawSeconds)
-      : 0
+    defuseSecondsLeft.value = Number.isFinite(rawSeconds) ? Math.max(0, rawSeconds) : 0
   }
 
   isDefuseActive = false
@@ -565,7 +546,6 @@ useGsiEvent('bombExplode', () => {
   resetCtProgress()
   resetTProgress()
 })
-
 
 useGsiEvent('roundEnd', (score) => {
   roundEndObject.value = score
@@ -631,22 +611,31 @@ onUnmounted(() => {
 <template>
   <div v-bind="teamAttrs(team.side)" class="flex-2 w-full h-full flex flex-col">
     <div
-      class="flex-1 flex flex-row group-[&.T]:flex-row-reverse w-full h-full bg-pri/70 ring-2 ring-sec/40 rounded-(--hai-radius) overflow-hidden relative">
+      class="flex-1 flex flex-row group-[&.T]:flex-row-reverse w-full h-full bg-pri/70 ring-2 ring-sec/40 rounded-(--hai-radius) overflow-hidden relative"
+    >
       <TeamAvatar
         custom-class-name="rounded-(--hai-radius) w-full h-full flex-1 flex items-center justify-center aspect-square z-2"
-        :team="team" size="imageSize" image-size="3rem" />
+        :team="team"
+        size="imageSize"
+        image-size="3rem"
+      />
 
       <div
-        class="flex-2 w-full h-full flex items-center justify-center font-bold text-2xl text-sec/90 text-shadow-sm text-shadow-pri z-1">
+        class="flex-2 w-full h-full flex items-center justify-center font-bold text-2xl text-sec/90 text-shadow-sm text-shadow-pri z-1"
+      >
         {{ team._db?.teamShortName }}
       </div>
 
       <div
-        class="flex-1 w-full h-full flex items-center justify-center font-bold text-3xl text-sec rounded-(--hai-radius) z-1">
+        class="flex-1 w-full h-full flex items-center justify-center font-bold text-3xl text-sec rounded-(--hai-radius) z-1"
+      >
         {{ team.score }}
       </div>
 
-      <div id="score" class="flex flex-col h-full gap-1 py-2 absolute group-[.CT]:right-2 group-[.T]:left-2">
+      <div
+        id="score"
+        class="flex flex-col h-full gap-1 py-2 absolute group-[.CT]:right-2 group-[.T]:left-2"
+      >
         <div
           v-for="index in seriesIndicatorCount"
           :key="index"
@@ -655,19 +644,24 @@ onUnmounted(() => {
         ></div>
       </div>
 
-      <div v-if="team.side === 'T'"
-        class="absolute w-3/4 h-full z-0 flex items-center justify-start bg-pri/40 group-[&.T]:justify-end rounded-(--hai-radius) overflow-hidden">
+      <div
+        v-if="team.side === 'T'"
+        class="absolute w-3/4 h-full z-0 flex items-center justify-start bg-pri/40 group-[&.T]:justify-end rounded-(--hai-radius) overflow-hidden"
+      >
         <div ref="tBar" class="progress-bar bg-(--main-90)"></div>
       </div>
 
-      <div v-if="team.side === 'CT'"
-        class="absolute w-3/4 h-full z-0 flex items-center justify-start bg-pri/40 rounded-(--hai-radius) overflow-hidden">
+      <div
+        v-if="team.side === 'CT'"
+        class="absolute w-3/4 h-full z-0 flex items-center justify-start bg-pri/40 rounded-(--hai-radius) overflow-hidden"
+      >
         <div ref="ctBar" class="progress-bar bg-(--main-90)"></div>
       </div>
 
       <div
         class="absolute z-1 w-0 px-0 opacity-0 h-full flex justify-end items-center bg-(--main-100) rounded-(--hai-radius) overflow-hidden group-[&.T]:justify-start transition-all duration-300"
-        :class="[{ 'w-full px-8 opacity-100': showRoundWinner }]">
+        :class="[{ 'w-full px-8 opacity-100': showRoundWinner }]"
+      >
         <div class="text-xl font-bold text-sec/90 text-shadow-xs text-shadow-pri">Round Winner</div>
       </div>
     </div>

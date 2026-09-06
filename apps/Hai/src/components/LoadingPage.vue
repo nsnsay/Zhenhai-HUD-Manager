@@ -10,7 +10,10 @@ defineProps<{
 
 <template>
   <Transition name="loading-exit" appear>
-    <div v-if="!gsi.data || !ready" class="loading-scrim fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      v-if="!gsi.data || !ready"
+      class="loading-scrim fixed inset-0 z-50 flex items-center justify-center"
+    >
       <div class="loading-card relative w-144 overflow-hidden rounded-[18px] p-8 text-white">
         <div class="loading-card__edge" />
 
@@ -21,7 +24,9 @@ defineProps<{
             </div>
             <div>
               <div class="text-[10px] font-semibold uppercase text-white/45">ZhenHai HUD</div>
-              <h1 class="mt-0.5 text-2xl font-semibold leading-tight text-white">ZhenHai HUD Manager</h1>
+              <h1 class="mt-0.5 text-2xl font-semibold leading-tight text-white">
+                ZhenHai HUD Manager
+              </h1>
             </div>
           </div>
 
@@ -59,8 +64,13 @@ defineProps<{
           </div>
 
           <div class="loading-track mt-7">
-            <div class="loading-track__fill" :class="{ 'is-counting': gsi.data }"
-              :style="{ width: gsi.data ? `${Math.min(100, Math.max(0, (5 - countdown) * 20))}%` : '0%' }" />
+            <div
+              class="loading-track__fill"
+              :class="{ 'is-counting': gsi.data }"
+              :style="{
+                width: gsi.data ? `${Math.min(100, Math.max(0, (5 - countdown) * 20))}%` : '0%',
+              }"
+            />
           </div>
         </div>
       </div>
@@ -69,7 +79,8 @@ defineProps<{
 </template>
 
 <style scoped lang="scss">
-.loading-scrim {}
+.loading-scrim {
+}
 
 .loading-card {
   background: linear-gradient(160deg, rgba(22, 30, 48, 0.99), rgba(8, 12, 24, 0.88));
@@ -212,7 +223,6 @@ defineProps<{
 }
 
 @keyframes statusPulse {
-
   0%,
   100% {
     opacity: 0.45;
@@ -240,7 +250,6 @@ defineProps<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .loading-scrim,
   .loading-card,
   .loading-card * {

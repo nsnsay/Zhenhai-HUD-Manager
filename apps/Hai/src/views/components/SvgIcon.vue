@@ -16,8 +16,12 @@ const props = withDefaults(
 </script>
 
 <template>
-  <svg :class="[customClassName]" class="svg-icon" aria-hidden="true"
-    :style="dropShadow ? { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.75))' } : {}">
+  <svg
+    :class="[customClassName]"
+    class="svg-icon"
+    aria-hidden="true"
+    :style="dropShadow ? { filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.75))' } : {}"
+  >
     <use :href="`#${name}`" />
   </svg>
 </template>

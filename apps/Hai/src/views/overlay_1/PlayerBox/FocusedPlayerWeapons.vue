@@ -16,7 +16,11 @@ const props = defineProps<{
 <template>
   <div v-if="player" class="flex flex-col justify-center items-start gap-3">
     <Bomb v-if="player.isBomb" :bomb="player.isBomb" image-size="32px" />
-    <DefuseKit v-if="player.state.defusekit" :defusekit="player.state.defusekit" image-size="32px" />
+    <DefuseKit
+      v-if="player.state.defusekit"
+      :defusekit="player.state.defusekit"
+      image-size="32px"
+    />
     <Weapons size="75px" :player="player" show-number />
     <Grenades :grenades="player.grenades" />
   </div>

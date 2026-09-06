@@ -20,10 +20,25 @@ const props = withDefaults(
 </script>
 
 <template>
-  <div v-if="player" class="armors relative" :class="[{ 'color-pure': !enableColor }, customClassName]"
-    :style="`width: ${size}`">
-    <SvgIcon custom-class-name="armor_helmet" v-if="player?.isArmorHelmet" :size="size" name="icon-hud-armor_helmet" />
-    <SvgIcon custom-class-name="armor" v-if="player?.isArmor" :size="size" name="icon-hud-armor" drop-shadow />
+  <div
+    v-if="player"
+    class="armors relative"
+    :class="[{ 'color-pure': !enableColor }, customClassName]"
+    :style="`width: ${size}`"
+  >
+    <SvgIcon
+      custom-class-name="armor_helmet"
+      v-if="player?.isArmorHelmet"
+      :size="size"
+      name="icon-hud-armor_helmet"
+    />
+    <SvgIcon
+      custom-class-name="armor"
+      v-if="player?.isArmor"
+      :size="size"
+      name="icon-hud-armor"
+      drop-shadow
+    />
     <div v-if="player?.state.armor && !disableArmorValue" class="armors-value">
       {{ player?.state.armor }}
     </div>

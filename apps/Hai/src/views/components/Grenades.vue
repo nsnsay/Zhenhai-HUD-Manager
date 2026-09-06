@@ -40,10 +40,17 @@ const grenadeSlots = computed(() => {
 
 <template v-if="grenades">
   <div class="grenades" :class="[customClassName]">
-    <div v-for="(slot, index) in grenadeSlots" :key="index"
-      :class="['grenade', slot.grenade ? slot.grenade.state : 'empty']">
-      <SvgIcon :size="size" v-if="slot.grenade" :drop-shadow="slot.grenade.state === 'active'"
-        :name="`icon-equipment-${formatWeaponName(slot.grenade.name)}`" />
+    <div
+      v-for="(slot, index) in grenadeSlots"
+      :key="index"
+      :class="['grenade', slot.grenade ? slot.grenade.state : 'empty']"
+    >
+      <SvgIcon
+        :size="size"
+        v-if="slot.grenade"
+        :drop-shadow="slot.grenade.state === 'active'"
+        :name="`icon-equipment-${formatWeaponName(slot.grenade.name)}`"
+      />
       <div v-else class="empty-dot-container">
         <div class="empty-dot"></div>
       </div>

@@ -1,12 +1,12 @@
-import { CSGOGSI } from '@zhenhai/csgogsi'
-import { EventEmitter } from 'events'
-import type { CSGO, Events } from '@zhenhai/csgogsi/types'
-import type { GsiPipeline } from './gsi-pipeline.service'
-import { logger } from './logger.service'
+import { CSGOGSI } from "@zhenhai/csgogsi";
+import { EventEmitter } from "events";
+import type { CSGO, Events } from "@zhenhai/csgogsi/types";
+import type { GsiPipeline } from "./gsi-pipeline.service";
+import { logger } from "./logger.service";
 
-type ExcludedGsiEvent = 'raw' | 'newListener' | 'removeListener'
+type ExcludedGsiEvent = "raw" | "newListener" | "removeListener";
 
-export type ForwardedGsiEvent = Exclude<keyof Events, ExcludedGsiEvent>
+export type ForwardedGsiEvent = Exclude<keyof Events, ExcludedGsiEvent>;
 
 /**
  * 使用 Record<ForwardedGsiEvent, true> 保证这里必须包含
@@ -39,66 +39,66 @@ const FORWARDED_GSI_EVENT_MAP: Record<ForwardedGsiEvent, true> = {
   bombPlantStop: true,
   bombPlant: true,
   bombExplode: true,
-  bombDefuse: true
-}
+  bombDefuse: true,
+};
 
-export const FORWARDED_GSI_EVENTS = Object.keys(FORWARDED_GSI_EVENT_MAP) as ForwardedGsiEvent[]
+export const FORWARDED_GSI_EVENTS = Object.keys(FORWARDED_GSI_EVENT_MAP) as ForwardedGsiEvent[];
 
 export class GsiService extends EventEmitter {
-  private static instance: GsiService
+  private static instance: GsiService;
 
   /**
    * 用于同步路径返回，避免每次请求都创建新的 Promise.resolve()。
    */
-  private static readonly RESOLVED: Promise<void> = Promise.resolve()
+  private static readonly RESOLVED: Promise<void> = Promise.resolve();
 
-  private gsi: CSGOGSI
-  private pipeline: GsiPipeline | null = null
+  private gsi: CSGOGSI;
+  private pipeline: GsiPipeline | null = null;
 
   /**
    * 避免异步 pipeline 错误重复刷屏。
    */
-  private pipelineSyncErrorLogged = false
+  private pipelineSyncErrorLogged = false;
 
   private constructor() {
-    super()
+    super();
 
-    this.gsi = new CSGOGSI()
+    this.gsi = new CSGOGSI();
 
-    this.registerEvents()
-    this.bindPreEmitTransform()
+    this.registerEvents();
+    this.bindPreEmitTransform();
 
-    logger.info('GsiService', 'Initialized')
+    logger.info("GsiService", "Initialized");
   }
 
   static getInstance(): GsiService {
     if (!GsiService.instance) {
-      GsiService.instance = new GsiService()
+      GsiService.instance = new GsiService();
     }
 
-    return GsiService.instance
+    return GsiService.instance;
   }
 
   setPipeline(pipeline: GsiPipeline): void {
-    this.pipeline = pipeline
-    logger.info('GsiService', 'Pipeline attached')
+    this.pipeline = pipeline;
+    logger.info("GsiService", "Pipeline attached");
   }
 
   private bindPreEmitTransform(): void {
-    const gsi = this.gsi as any
+    const gsi = this.gsi as any;
 
-    if (typeof gsi.setPreEmitTransform !== 'function') {
+    if (typeof gsi.setPreEmitTransform !== "function") {
       logger.warn(
-        'GsiService',
-        'Current CSGOGSI does not support setPreEmitTransform. Events will not be enhanced by pipeline.'
-      )
+        "GsiService",
+        "Current CSGOGSI does not support setPreEmitTransform. Events will not be enhanced by pipeline.",
+      );
 
-      return
+      return;
     }
 
     gsi.setPreEmitTransform((data: CSGO) => {
-      return this.applyPipelineBeforeEmit(data)
-    })
+      return this.applyPipelineBeforeEmit(data);
+    });
   }
 
   /**
@@ -108,47 +108,47 @@ export class GsiService extends EventEmitter {
    * 则跳过 pipeline，避免无意义 CPU 消耗。
    */
   private shouldApplyPipeline(): boolean {
-    if (this.listenerCount('gsi:data') > 0) {
-      return true
+    if (this.listenerCount("gsi:data") > 0) {
+      return true;
     }
 
     return FORWARDED_GSI_EVENTS.some((eventName) => {
-      return this.listenerCount(eventName) > 0
-    })
+      return this.listenerCount(eventName) > 0;
+    });
   }
 
   /**
    * 在 CSGOGSI 触发事件前执行同步 pipeline。
    */
   private applyPipelineBeforeEmit(data: CSGO): CSGO {
-    const pipeline = this.pipeline
+    const pipeline = this.pipeline;
 
     if (!pipeline) {
-      return data
+      return data;
     }
 
     if (!this.shouldApplyPipeline()) {
-      return data
+      return data;
     }
 
     try {
-      const result = pipeline.processSync(data)
+      const result = pipeline.processSync(data);
 
-      return result ?? data
+      return result ?? data;
     } catch (error) {
       if (!this.pipelineSyncErrorLogged) {
-        this.pipelineSyncErrorLogged = true
+        this.pipelineSyncErrorLogged = true;
 
         logger.error(
-          'GsiService',
-          'preEmit pipeline failed. When using CSGOGSI setPreEmitTransform, pipeline must be synchronous.',
-          error
-        )
+          "GsiService",
+          "preEmit pipeline failed. When using CSGOGSI setPreEmitTransform, pipeline must be synchronous.",
+          error,
+        );
       }
 
-      this.emit('pipeline:error', error)
+      this.emit("pipeline:error", error);
 
-      return data
+      return data;
     }
   }
 
@@ -159,27 +159,27 @@ export class GsiService extends EventEmitter {
    */
   digest(data: any): Promise<void> {
     try {
-      const parsed = this.gsi.digest(data)
+      const parsed = this.gsi.digest(data);
 
-      if (this.listenerCount('rawData') > 0) {
-        this.emit('rawData', data)
+      if (this.listenerCount("rawData") > 0) {
+        this.emit("rawData", data);
       }
 
-      if (this.listenerCount('gsi:data') === 0) {
-        return GsiService.RESOLVED
+      if (this.listenerCount("gsi:data") === 0) {
+        return GsiService.RESOLVED;
       }
 
-      const enriched = parsed ?? this.gsi.current ?? this.gsi.last
+      const enriched = parsed ?? this.gsi.current ?? this.gsi.last;
 
       if (!enriched) {
-        return GsiService.RESOLVED
+        return GsiService.RESOLVED;
       }
 
-      this.emit('gsi:data', enriched)
+      this.emit("gsi:data", enriched);
 
-      return GsiService.RESOLVED
+      return GsiService.RESOLVED;
     } catch (error) {
-      return Promise.reject(error)
+      return Promise.reject(error);
     }
   }
 
@@ -198,11 +198,11 @@ export class GsiService extends EventEmitter {
     for (const eventName of FORWARDED_GSI_EVENTS) {
       const listener = (...args: any[]) => {
         if (this.listenerCount(eventName) > 0) {
-          this.emit(eventName, ...args)
+          this.emit(eventName, ...args);
         }
-      }
+      };
 
-      ;(this.gsi as any).on(eventName, listener)
+      (this.gsi as any).on(eventName, listener);
     }
   }
 }

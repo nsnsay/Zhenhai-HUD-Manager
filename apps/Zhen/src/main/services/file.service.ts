@@ -19,9 +19,15 @@ export class FileService {
     return FileService.instance;
   }
 
-    save(base64: string, fileName: string, category: string): string {
-    const safeCategory = category.replace(/[\\/]/g, "_").replace(/\.\./g, "_").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const safeFileName = fileName.replace(/[\\/]/g, "_").replace(/\.\./g, "_").replace(/[^a-zA-Z0-9._-]/g, "_");
+  save(base64: string, fileName: string, category: string): string {
+    const safeCategory = category
+      .replace(/[\\/]/g, "_")
+      .replace(/\.\./g, "_")
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    const safeFileName = fileName
+      .replace(/[\\/]/g, "_")
+      .replace(/\.\./g, "_")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
     const dir = join(this.assetsDir, safeCategory);
     mkdirSync(dir, { recursive: true });
 
@@ -36,11 +42,15 @@ export class FileService {
     return `${safeCategory}/${safeFileName}`;
   }
 
-    delete(relativePath: string): boolean {
+  delete(relativePath: string): boolean {
     const safeRelativePath = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
     const filePath = resolve(this.assetsDir, safeRelativePath);
     const assetsRoot = resolve(this.assetsDir);
-    if (filePath !== assetsRoot && !filePath.startsWith(assetsRoot + "\\") && !filePath.startsWith(assetsRoot + "/")) {
+    if (
+      filePath !== assetsRoot &&
+      !filePath.startsWith(assetsRoot + "\\") &&
+      !filePath.startsWith(assetsRoot + "/")
+    ) {
       return false;
     }
     if (existsSync(filePath)) {
@@ -51,7 +61,7 @@ export class FileService {
     return false;
   }
 
-    getAssetsDir(): string {
+  getAssetsDir(): string {
     return this.assetsDir;
   }
 }

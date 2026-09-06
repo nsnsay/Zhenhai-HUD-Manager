@@ -1,6 +1,6 @@
-import type { Grenade, Player, Side } from "@zhenhai/csgogsi/types";
+import type { Grenade, Player, Side } from '@zhenhai/csgogsi/types'
 
-export type RadarGrenadeState = "inair" | "landed" | "exploded";
+export type RadarGrenadeState = 'inair' | 'landed' | 'exploded'
 
 /**
  * 雷达玩家对象
@@ -21,18 +21,18 @@ export type RadarGrenadeState = "inair" | "landed" | "exploded";
  * - scale：雷达缩放
  */
 export type RadarPlayerObject = Player & {
-  id: string;
-  side: Side;
-  position: [number, number, number];
-  visible: boolean;
-  isActive: boolean;
-  isAlive: boolean;
-  hasBomb: boolean;
-  isFlashed: boolean;
-  isShooting: boolean;
-  lastShoot: number;
-  scale: number;
-};
+  id: string
+  side: Side
+  position: [number, number, number]
+  visible: boolean
+  isActive: boolean
+  isAlive: boolean
+  hasBomb: boolean
+  isFlashed: boolean
+  isShooting: boolean
+  lastShoot: number
+  scale: number
+}
 
 /**
  * 雷达峰面渲染对象
@@ -41,15 +41,15 @@ export type RadarPlayerObject = Player & {
  * 对于 inferno，会展开成火焰点位，但仍然保留 Grenade 基础字段。
  */
 export type RadarGrenadeObject = Grenade & {
-  state: RadarGrenadeState;
-  side: Side | null;
-  position: number[];
-  visible: boolean;
-};
+  state: RadarGrenadeState
+  side: Side | null
+  position: number[]
+  visible: boolean
+}
 
 /**
  * 扩展原始 Grenade，补充归属 side。
  */
 export type ExtendedGrenade = Grenade & {
-  side: Side | null;
-};
+  side: Side | null
+}

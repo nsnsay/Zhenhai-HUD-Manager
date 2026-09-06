@@ -23,18 +23,14 @@ const playersStore = usePlayersStore();
 const matchsStore = useMatchsStore();
 
 function syncNativeTheme(theme: NativeThemeSource): void {
-  void window.api.setThemeSource(theme)
+  void window.api.setThemeSource(theme);
 }
 
 onMounted(() => {
   gsi.connect();
   syncNativeTheme(
-    colorMode.value === "dark"
-      ? "dark"
-      : colorMode.value === "light"
-        ? "light"
-        : "system",
-  )
+    colorMode.value === "dark" ? "dark" : colorMode.value === "light" ? "light" : "system",
+  );
 });
 onUnmounted(() => {
   gsi.disconnect();
@@ -47,14 +43,14 @@ let updatePromptId: string | number | null = null;
 
 function dismissUpdatePrompt(): void {
   if (updatePromptId !== null) {
-    toast.remove(updatePromptId)
-    updatePromptId = null
+    toast.remove(updatePromptId);
+    updatePromptId = null;
   }
 }
 
 function handleUpdaterEvent(event: UpdaterEventPayload): void {
   if (event.type === "available") {
-    dismissUpdatePrompt()
+    dismissUpdatePrompt();
     const toastItem = toast.add({
       title: "Update Available",
       description: `Version ${event.version ?? "latest"} is ready to download.`,
@@ -66,8 +62,8 @@ function handleUpdaterEvent(event: UpdaterEventPayload): void {
           label: "Download",
           color: "primary",
           onClick: () => {
-            dismissUpdatePrompt()
-            void window.api.updater.downloadUpdate()
+            dismissUpdatePrompt();
+            void window.api.updater.downloadUpdate();
           },
         },
         {
@@ -77,12 +73,12 @@ function handleUpdaterEvent(event: UpdaterEventPayload): void {
           onClick: dismissUpdatePrompt,
         },
       ],
-    })
-    updatePromptId = toastItem.id
+    });
+    updatePromptId = toastItem.id;
   }
 
   if (event.type === "downloaded") {
-    dismissUpdatePrompt()
+    dismissUpdatePrompt();
     const toastItem = toast.add({
       title: "Update Ready",
       description: `Version ${event.version ?? "latest"} has been downloaded.`,
@@ -94,13 +90,13 @@ function handleUpdaterEvent(event: UpdaterEventPayload): void {
           label: "Restart & Install",
           color: "primary",
           onClick: () => {
-            dismissUpdatePrompt()
-            void window.api.updater.installUpdate()
+            dismissUpdatePrompt();
+            void window.api.updater.installUpdate();
           },
         },
       ],
-    })
-    updatePromptId = toastItem.id
+    });
+    updatePromptId = toastItem.id;
   }
 }
 
@@ -224,10 +220,10 @@ const menuItems = computed<NavigationMenuItem[]>(() => {
       to: "/",
       children: isExpanded
         ? [
-          { label: "Matchs", icon: "i-lucide-trophy", to: "/matchs" },
-          { label: "Teams", icon: "i-lucide-users", to: "/teams" },
-          { label: "Players", icon: "i-lucide-circle-user-round", to: "/players" },
-        ]
+            { label: "Matchs", icon: "i-lucide-trophy", to: "/matchs" },
+            { label: "Teams", icon: "i-lucide-users", to: "/teams" },
+            { label: "Players", icon: "i-lucide-circle-user-round", to: "/players" },
+          ]
         : undefined,
     },
     {
@@ -238,14 +234,14 @@ const menuItems = computed<NavigationMenuItem[]>(() => {
       to: "/toolbox",
       children: isExpanded
         ? [
-          { label: "GSI Data", icon: "i-lucide-binary", to: "/toolbox/gsi" },
-          {
-            label: "Commands & Links",
-            icon: "i-lucide-link-2",
-            to: "/toolbox/commands-links",
-          },
-          { label: "Logs", icon: "i-lucide-scroll-text", to: "/toolbox/logs" },
-        ]
+            { label: "GSI Data", icon: "i-lucide-binary", to: "/toolbox/gsi" },
+            {
+              label: "Commands & Links",
+              icon: "i-lucide-link-2",
+              to: "/toolbox/commands-links",
+            },
+            { label: "Logs", icon: "i-lucide-scroll-text", to: "/toolbox/logs" },
+          ]
         : undefined,
     },
   ];
@@ -367,13 +363,9 @@ async function confirmDeleteTournament() {
   if (!target) return;
 
   const wasCurrentTournament = currentTournament.currentId === target.id;
-  const relatedMatchs = matchsStore.items.filter(
-    (match) => match.tournamentId === target.id,
-  );
+  const relatedMatchs = matchsStore.items.filter((match) => match.tournamentId === target.id);
   const relatedTeams = teamsStore.items.filter((team) => team.tournamentId === target.id);
-  const relatedPlayers = playersStore.items.filter(
-    (player) => player.tournamentId === target.id,
-  );
+  const relatedPlayers = playersStore.items.filter((player) => player.tournamentId === target.id);
 
   const childDeletions = [
     ...relatedMatchs.map((match) => () => matchsStore.remove(match.id)),
@@ -431,60 +423,120 @@ async function confirmDeleteTournament() {
 
 <template>
   <div class="flex flex-1 w-full h-full">
-    <USidebar collapsible="icon" rail :ui="{
-      container: 'h-full',
-      inner: 'bg-elevated/25 divide-transparent',
-      body: 'py-0',
-    }">
+    <USidebar
+      collapsible="icon"
+      rail
+      :ui="{
+        container: 'h-full',
+        inner: 'bg-elevated/25 divide-transparent',
+        body: 'py-0',
+      }"
+    >
       <template #header>
         <img src="../assets/icon.png" class="h-8 w-auto" />
-        <div class="absolute top-0 left-0 right-0 h-(--ui-header-height)" style="-webkit-app-region: drag" />
+        <div
+          class="absolute top-0 left-0 right-0 h-(--ui-header-height)"
+          style="-webkit-app-region: drag"
+        />
       </template>
 
       <template #default="{ state }">
-        <component :is="() => {
-          sidebarState = state;
-          return null;
-        }
-          " />
+        <component
+          :is="
+            () => {
+              sidebarState = state;
+              return null;
+            }
+          "
+        />
 
-        <UNavigationMenu :key="state" :items="menuItems" orientation="vertical"
-          :ui="{ link: 'p-1.5 overflow-hidden' }" />
+        <UNavigationMenu
+          :key="state"
+          :items="menuItems"
+          orientation="vertical"
+          :ui="{ link: 'p-1.5 overflow-hidden' }"
+        />
 
-        <UButton class="relative mt-auto flex justify-center items-center cursor-pointer" color="neutral" :class="[
-          {
-            'bg-linear-to-r from-sky-300 to-sky-700 transition duration-800':
-              overlayState === 'shown',
-          },
-        ]" icon="i-lucide-send-to-back" @click="handleToggleOverlay()" variant="subtle">
+        <UButton
+          class="relative mt-auto flex justify-center items-center cursor-pointer"
+          color="neutral"
+          :class="[
+            {
+              'bg-linear-to-r from-sky-300 to-sky-700 transition duration-800':
+                overlayState === 'shown',
+            },
+          ]"
+          icon="i-lucide-send-to-back"
+          @click="handleToggleOverlay()"
+          variant="subtle"
+        >
           <div v-if="sidebarState === 'expanded'">Overlay</div>
         </UButton>
       </template>
 
       <template #footer>
-        <UDropdownMenu :items="userItems" :content="{ align: 'center', collisionPadding: 12 }"
-          :ui="{ content: 'w-(--reka-dropdown-menu-trigger-width) min-w-48' }">
-          <UButton v-bind="user" :label="user?.name" trailing-icon="i-lucide-chevrons-up-down" color="neutral"
-            variant="ghost" square class="w-full data-[state=open]:bg-elevated overflow-hidden"
-            :ui="{ trailingIcon: 'text-dimmed ms-auto' }" />
+        <UDropdownMenu
+          :items="userItems"
+          :content="{ align: 'center', collisionPadding: 12 }"
+          :ui="{ content: 'w-(--reka-dropdown-menu-trigger-width) min-w-48' }"
+        >
+          <UButton
+            v-bind="user"
+            :label="user?.name"
+            trailing-icon="i-lucide-chevrons-up-down"
+            color="neutral"
+            variant="ghost"
+            square
+            class="w-full data-[state=open]:bg-elevated overflow-hidden"
+            :ui="{ trailingIcon: 'text-dimmed ms-auto' }"
+          />
         </UDropdownMenu>
       </template>
     </USidebar>
 
     <!-- Main Content -->
     <div class="flex-1 flex flex-col relative">
-      <div class="relative h-(--ui-header-height) shrink-0 flex items-center gap-1 px-3 border-b border-default">
-        <UDropdownMenu :items="teamsItems" :content="{ align: 'start', collisionPadding: 12 }"
-          :ui="{ content: 'w-(--reka-dropdown-menu-trigger-width) min-w-48' }">
-          <UButton v-bind="selectedTeam" trailing-icon="i-lucide-chevrons-up-down" color="neutral" variant="ghost"
-            square class="w-48 data-[state=open]:bg-elevated overflow-hidden"
-            :ui="{ trailingIcon: 'text-dimmed ms-auto' }" />
+      <div
+        class="relative h-(--ui-header-height) shrink-0 flex items-center gap-1 px-3 border-b border-default"
+      >
+        <UDropdownMenu
+          :items="teamsItems"
+          :content="{ align: 'start', collisionPadding: 12 }"
+          :ui="{ content: 'w-(--reka-dropdown-menu-trigger-width) min-w-48' }"
+        >
+          <UButton
+            v-bind="selectedTeam"
+            trailing-icon="i-lucide-chevrons-up-down"
+            color="neutral"
+            variant="ghost"
+            square
+            class="w-48 data-[state=open]:bg-elevated overflow-hidden"
+            :ui="{ trailingIcon: 'text-dimmed ms-auto' }"
+          />
         </UDropdownMenu>
         <div class="absolute top-3 left-60 right-30 bottom-0" style="-webkit-app-region: drag" />
         <div class="flex ml-auto z-100001 fixed right-3">
-          <UButton @click="handleMinimize()" icon="i-lucide-minus" size="lg" color="secondary" variant="ghost" />
-          <UButton @click="handleMaximize()" icon="i-lucide-maximize-2" size="lg" color="primary" variant="ghost" />
-          <UButton @click="handleClose()" icon="i-lucide-x" size="lg" color="error" variant="ghost" />
+          <UButton
+            @click="handleMinimize()"
+            icon="i-lucide-minus"
+            size="lg"
+            color="secondary"
+            variant="ghost"
+          />
+          <UButton
+            @click="handleMaximize()"
+            icon="i-lucide-maximize-2"
+            size="lg"
+            color="primary"
+            variant="ghost"
+          />
+          <UButton
+            @click="handleClose()"
+            icon="i-lucide-x"
+            size="lg"
+            color="error"
+            variant="ghost"
+          />
         </div>
       </div>
       <div class="absolute top-0 left-0 right-0 h-3.25" style="-webkit-app-region: drag" />
@@ -505,9 +557,12 @@ async function confirmDeleteTournament() {
   <TournamentModal ref="tournamentModalRef" v-model:open="showTournamentModal" />
   <SettingsModal v-model:open="showSettingsModal" />
 
-  <UModal v-model:open="showDeleteTournamentConfirm" title="Confirm Deletion"
+  <UModal
+    v-model:open="showDeleteTournamentConfirm"
+    title="Confirm Deletion"
     :description="`Delete tournament ${deleteTournamentTarget?.tournamentName}? This will also remove ${deleteTournamentCounts.matches} matches, ${deleteTournamentCounts.teams} teams, and ${deleteTournamentCounts.players} players. This action cannot be undone.`"
-    :ui="{ footer: 'justify-end' }">
+    :ui="{ footer: 'justify-end' }"
+  >
     <template #footer="{ close }">
       <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
       <UButton label="Delete" color="error" @click="confirmDeleteTournament" />
@@ -540,7 +595,6 @@ async function confirmDeleteTournament() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .route-enter-active,
   .route-leave-active {
     transition: opacity 160ms ease;

@@ -51,16 +51,16 @@ const modeFields = [
 ] as const;
 
 const windowMaterialOptions: Array<{
-  label: string
-  value: AppSettings["windowMaterial"]
+  label: string;
+  value: AppSettings["windowMaterial"];
 }> = [
-    { label: "Off", value: "none" },
-    { label: "Acrylic", value: "acrylic" },
-    { label: "Mica", value: "mica" },
-  ];
+  { label: "Off", value: "none" },
+  { label: "Acrylic", value: "acrylic" },
+  { label: "Mica", value: "mica" },
+];
 
 function applyWindowMaterialBody(material: AppSettings["windowMaterial"]) {
-  document.body.dataset.windowMaterial = material
+  document.body.dataset.windowMaterial = material;
 }
 
 async function loadSettings() {
@@ -78,15 +78,10 @@ async function loadSettings() {
 
       formData.value = mergeAppSettings(existing.settings);
 
-      extrasJson.value = JSON.stringify(
-        formData.value.extras || {},
-        null,
-        2
-      );
+      extrasJson.value = JSON.stringify(formData.value.extras || {}, null, 2);
 
       parseShortcut(
-        formData.value.overlayRefreshShortcut ||
-        DEFAULT_APP_SETTINGS.overlayRefreshShortcut
+        formData.value.overlayRefreshShortcut || DEFAULT_APP_SETTINGS.overlayRefreshShortcut,
       );
     } else {
       recordId.value = null;
@@ -94,18 +89,14 @@ async function loadSettings() {
 
       formData.value = mergeAppSettings(null);
 
-      extrasJson.value = JSON.stringify(
-        formData.value.extras || {},
-        null,
-        2
-      );
+      extrasJson.value = JSON.stringify(formData.value.extras || {}, null, 2);
 
       parseShortcut(DEFAULT_APP_SETTINGS.overlayRefreshShortcut);
     }
     rendererLogger.info("SettingsModal", "Settings loaded", {
       recordId: recordId.value,
     });
-    applyWindowMaterialBody(formData.value.windowMaterial)
+    applyWindowMaterialBody(formData.value.windowMaterial);
   } catch (e) {
     rendererLogger.error("SettingsModal", "Failed to load settings", e);
   } finally {
@@ -163,8 +154,8 @@ async function saveSettings() {
         description: "Your preferences have been updated.",
         icon: "i-lucide-check",
       });
-      await window.api.setWindowMaterial(formData.value.windowMaterial)
-      applyWindowMaterialBody(formData.value.windowMaterial)
+      await window.api.setWindowMaterial(formData.value.windowMaterial);
+      applyWindowMaterialBody(formData.value.windowMaterial);
       emit("update:open", false);
     } else {
       rendererLogger.error("SettingsModal", "Settings save failed", result.error);
@@ -181,11 +172,11 @@ async function saveSettings() {
 }
 
 async function checkForUpdates() {
-  if (isCheckingUpdate.value) return
-  isCheckingUpdate.value = true
+  if (isCheckingUpdate.value) return;
+  isCheckingUpdate.value = true;
 
   try {
-    const result = await window.api.updater.checkForUpdates()
+    const result = await window.api.updater.checkForUpdates();
 
     if (result.success && !result.updateAvailable) {
       toast.add({
@@ -193,17 +184,17 @@ async function checkForUpdates() {
         description: "No new ZhenHai updates are available.",
         icon: "i-lucide-check-circle",
         color: "success",
-      })
+      });
     } else if (!result.success) {
       toast.add({
         title: "Update Check Failed",
         description: result.error || "Unable to reach GitHub releases.",
         icon: "i-lucide-alert-triangle",
         color: "error",
-      })
+      });
     }
   } finally {
-    isCheckingUpdate.value = false
+    isCheckingUpdate.value = false;
   }
 }
 
@@ -259,13 +250,18 @@ watch(
 </script>
 
 <template>
-  <UModal :open="open" @update:open="emit('update:open', $event)" title="Settings"
-    description="Configure overlay and application preferences." :ui="{
+  <UModal
+    :open="open"
+    @update:open="emit('update:open', $event)"
+    title="Settings"
+    description="Configure overlay and application preferences."
+    :ui="{
       content: 'max-w-3xl rounded-2xl bg-elevated/80',
       header: 'px-6 pt-5 pb-4 border-b border-default/40',
       body: 'px-6 py-5',
       footer: 'px-6 py-4 border-t border-default/40',
-    }">
+    }"
+  >
     <template #body>
       <div v-if="isLoading" class="flex justify-center py-16">
         <UIcon name="i-lucide-loader-2" class="animate-spin h-6 w-6 text-muted" />
@@ -289,8 +285,10 @@ watch(
                 <UPopover>
                   <UButton color="neutral" variant="outline" class="w-full justify-between">
                     <span class="flex items-center gap-2">
-                      <span class="h-4 w-4 rounded-full border border-default shrink-0"
-                        :style="{ backgroundColor: formData[field.key] }"></span>
+                      <span
+                        class="h-4 w-4 rounded-full border border-default shrink-0"
+                        :style="{ backgroundColor: formData[field.key] }"
+                      ></span>
                       <span class="truncate text-xs font-mono">{{ formData[field.key] }}</span>
                     </span>
                     <UIcon name="i-lucide-chevrons-up-down" class="text-muted shrink-0" />
@@ -317,9 +315,15 @@ watch(
 
           <div class="settings-panel border border-muted">
             <div class="settings-panel__label">Window Material</div>
-            <p class="mt-1 text-xs text-muted">Acrylic and Mica are available on supported Windows versions.</p>
-            <USelect v-model="formData.windowMaterial" :items="windowMaterialOptions" value-key="value"
-              class="mt-3 w-full" />
+            <p class="mt-1 text-xs text-muted">
+              Acrylic and Mica are available on supported Windows versions.
+            </p>
+            <USelect
+              v-model="formData.windowMaterial"
+              :items="windowMaterialOptions"
+              value-key="value"
+              class="mt-3 w-full"
+            />
           </div>
 
           <div class="settings-panel settings-panel--action">
@@ -327,8 +331,15 @@ watch(
               <div class="settings-panel__label">Application Update</div>
               <p class="text-xs text-muted">Check GitHub releases for a newer version.</p>
             </div>
-            <UButton label="Check for Updates" icon="i-lucide-refresh-cw" color="primary" variant="subtle" size="sm"
-              :loading="isCheckingUpdate" @click="checkForUpdates" />
+            <UButton
+              label="Check for Updates"
+              icon="i-lucide-refresh-cw"
+              color="primary"
+              variant="subtle"
+              size="sm"
+              :loading="isCheckingUpdate"
+              @click="checkForUpdates"
+            />
           </div>
         </div>
 
@@ -345,7 +356,12 @@ watch(
           <div class="settings-panel border border-muted">
             <div class="grid grid-cols-2 gap-3">
               <UFormField v-for="field in modeFields" :key="field.key" :label="field.label">
-                <USelect v-model="formData[field.key]" :items="modeOptions" value-key="value" class="w-full" />
+                <USelect
+                  v-model="formData[field.key]"
+                  :items="modeOptions"
+                  value-key="value"
+                  class="w-full"
+                />
               </UFormField>
             </div>
           </div>
@@ -375,7 +391,12 @@ watch(
               </UFormField>
             </div>
             <UFormField class="mt-3" label="Extras (Custom JSON)" hint="Advanced configuration">
-              <UTextarea v-model="extrasJson" :rows="5" placeholder="{}" class="w-full font-mono text-xs" />
+              <UTextarea
+                v-model="extrasJson"
+                :rows="5"
+                placeholder="{}"
+                class="w-full font-mono text-xs"
+              />
             </UFormField>
           </div>
 
@@ -384,10 +405,18 @@ watch(
               <div class="settings-panel__label">First-run Wizard</div>
               <p class="text-xs text-muted">Reopen CS2 path and tournament setup flow.</p>
             </div>
-            <UButton label="Re-run Wizard" icon="i-lucide-wand-2" color="neutral" variant="outline" size="sm"
-              @click="openStartModal?.(); emit('update:open', false)" />
+            <UButton
+              label="Re-run Wizard"
+              icon="i-lucide-wand-2"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              @click="
+                openStartModal?.();
+                emit('update:open', false);
+              "
+            />
           </div>
-
         </div>
       </div>
     </template>
@@ -449,12 +478,11 @@ watch(
   line-height: 1.4;
 }
 
-.settings-panel__label+.text-xs {
+.settings-panel__label + .text-xs {
   margin-top: 2px;
 }
 
 @media (prefers-reduced-transparency: reduce) {
-
   .settings-panel,
   .settings-scroll {
     backdrop-filter: none;

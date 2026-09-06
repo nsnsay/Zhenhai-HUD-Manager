@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import SvgIcon from './SvgIcon.vue';
-
+import SvgIcon from './SvgIcon.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -12,7 +11,6 @@ const props = withDefaults(
     imageSize: '3rem',
   },
 )
-
 </script>
 
 <template>

@@ -11,9 +11,9 @@
     "dev:hai": "turbo run dev --filter=@repo/hai",
     "build": "bun run --cwd apps/Hai build && bun run --cwd apps/Zhen build:win",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
-    "format": "turbo run format",
-    "clean": "turbo run clean"
+    "format": "oxfmt .",
+    "clean": "turbo run clean",
+    "lint": "oxlint ."
   },
   "dependencies": {
     "@fontsource-variable/sora": "^5.3.0",
@@ -28,6 +28,9 @@
   "devDependencies": {
     "@tailwindcss/vite": "latest",
     "@vitejs/plugin-vue": "^6.0.8",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.7.4",
     "sass-embedded": "latest",
     "tailwindcss": "latest",

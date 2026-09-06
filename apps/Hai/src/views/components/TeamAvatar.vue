@@ -3,7 +3,7 @@ import type { Team } from '@zhenhai/csgogsi'
 import CTAvatar from '@/assets/game_icons/default_ct.png'
 import TAvatar from '@/assets/game_icons/default_t.png'
 import { computed } from 'vue'
-import SvgIcon from './SvgIcon.vue';
+import SvgIcon from './SvgIcon.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -16,12 +16,17 @@ const props = withDefaults(
     imageSize: '4rem',
   },
 )
-
 </script>
 
 <template>
   <div class="teamAvatar" :class="[customClassName, size]">
-    <img v-if="team._db?.teamLogo" class="teamAvatar-img" :class="[size]" :src="team._db?.teamLogo" alt="" />
+    <img
+      v-if="team._db?.teamLogo"
+      class="teamAvatar-img"
+      :class="[size]"
+      :src="team._db?.teamLogo"
+      alt=""
+    />
     <SvgIcon v-if="!team._db?.teamLogo && team.side === 'T'" :size="size" name="icon-ui-t_logo" />
     <SvgIcon v-if="!team._db?.teamLogo && team.side === 'CT'" :size="size" name="icon-ui-ct_logo" />
   </div>

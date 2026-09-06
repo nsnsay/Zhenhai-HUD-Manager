@@ -228,9 +228,12 @@ async function handleSubmit(close: () => void) {
 </script>
 
 <template>
-  <UModal v-model:open="open" :title="editId ? 'Edit Team' : 'Create Team'"
+  <UModal
+    v-model:open="open"
+    :title="editId ? 'Edit Team' : 'Create Team'"
     :description="editId ? 'Update team information' : 'Team Name, Team Logo, Team Info'"
-    :ui="{ footer: 'justify-end', content: 'min-w-120' }">
+    :ui="{ footer: 'justify-end', content: 'min-w-120' }"
+  >
     <UButton icon="i-lucide-plus" label="Create Team" color="primary" />
     <template #body>
       <div class="flex justify-between w-full">
@@ -246,32 +249,63 @@ async function handleSubmit(close: () => void) {
           <UInput v-model="teamData.teamShortName" placeholder="e.g. TYL" class="w-48" />
         </UFormField>
         <UFormField label="Country / Region" name="teamCountry" hint="Optional">
-          <USelect v-model="teamData.teamCountry" :items="countryItems" value-key="value" class="w-48" :ui="{
-            trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-          }" />
+          <USelect
+            v-model="teamData.teamCountry"
+            :items="countryItems"
+            value-key="value"
+            class="w-48"
+            :ui="{
+              trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
+            }"
+          />
         </UFormField>
       </div>
       <div class="flex justify-between w-full">
-        <UFormField label="Players" name="playerIds" :hint="`${teamData?.playerIds.length}/10 Optional`">
-          <USelectMenu v-model="teamData.playerIds" :items="playerOptions" value-key="value" multiple :max-items="10"
-            placeholder="Select players..." class="w-48" :ui="{
+        <UFormField
+          label="Players"
+          name="playerIds"
+          :hint="`${teamData?.playerIds.length}/10 Optional`"
+        >
+          <USelectMenu
+            v-model="teamData.playerIds"
+            :items="playerOptions"
+            value-key="value"
+            multiple
+            :max-items="10"
+            placeholder="Select players..."
+            class="w-48"
+            :ui="{
               trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-            }" />
+            }"
+          />
         </UFormField>
       </div>
       <UFormField label="Team Logo" name="teamLogo">
-        <UFileUpload v-model="logoFile" accept="image/*" label="Drop your image here"
-          description="SVG, PNG, JPG, WEBP (max. 16MB)" class="w-full" />
+        <UFileUpload
+          v-model="logoFile"
+          accept="image/*"
+          label="Drop your image here"
+          description="SVG, PNG, JPG, WEBP (max. 16MB)"
+          class="w-full"
+        />
       </UFormField>
       <div v-if="displayPreview" class="flex items-center gap-3 mt-2">
-        <img :src="displayPreview" alt="Team Logo" class="h-12 w-12 rounded object-contain border border-default" />
+        <img
+          :src="displayPreview"
+          alt="Team Logo"
+          class="h-12 w-12 rounded object-contain border border-default"
+        />
         <span class="text-xs text-muted">Logo preview</span>
       </div>
     </template>
     <template #footer="{ close }">
       <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-      <UButton :label="editId ? 'Update' : 'Submit'" color="neutral" :loading="isSubmitting"
-        @click="handleSubmit(close)" />
+      <UButton
+        :label="editId ? 'Update' : 'Submit'"
+        color="neutral"
+        :loading="isSubmitting"
+        @click="handleSubmit(close)"
+      />
     </template>
   </UModal>
 </template>

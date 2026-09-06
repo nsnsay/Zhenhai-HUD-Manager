@@ -40,14 +40,12 @@ onMounted(async () => {
 
   const extrasStore = useExtrasStore();
 
-  const settingsRecord = extrasStore.items.find(
-    (item) => item.configType === "app-settings",
-  ) as ExtrasRecord | undefined;
+  const settingsRecord = extrasStore.items.find((item) => item.configType === "app-settings") as
+    | ExtrasRecord
+    | undefined;
 
-  const firstStartFinished =
-    settingsRecord?.settings?.firstStartFinished === true;
-  document.body.dataset.windowMaterial =
-    settingsRecord?.settings?.windowMaterial ?? "none";
+  const firstStartFinished = settingsRecord?.settings?.firstStartFinished === true;
+  document.body.dataset.windowMaterial = settingsRecord?.settings?.windowMaterial ?? "none";
 
   rendererLogger.info("AppBootstrap", "Initial stores loaded", {
     players: usePlayersStore().items.length,
@@ -64,7 +62,6 @@ onMounted(async () => {
   sponsorModalOpen.value = true;
   rendererLogger.info("AppBootstrap", "Sponsor modal shown");
 });
-
 </script>
 
 <template>

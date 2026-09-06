@@ -68,7 +68,11 @@ class UpdateService {
     logger.info("UpdateService", "Initialized");
   }
 
-  async checkForUpdates(): Promise<{ success: boolean; updateAvailable?: boolean; error?: string }> {
+  async checkForUpdates(): Promise<{
+    success: boolean;
+    updateAvailable?: boolean;
+    error?: string;
+  }> {
     try {
       logger.info("UpdateService", "Manual/automatic update check requested");
       const result = await autoUpdater.checkForUpdates();

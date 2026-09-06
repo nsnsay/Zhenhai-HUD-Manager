@@ -21,7 +21,10 @@ const topLevelKeys = computed(() => (gsi.data ? Object.keys(gsi.data).length : 0
       </div>
 
       <div class="flex items-center gap-2">
-        <UBadge :color="connected ? 'success' : 'warning'" :variant="connected ? 'subtle' : 'outline'">
+        <UBadge
+          :color="connected ? 'success' : 'warning'"
+          :variant="connected ? 'subtle' : 'outline'"
+        >
           {{ connected ? "Connected" : "Disconnected" }}
         </UBadge>
         <UBadge v-if="hasData" color="neutral" variant="outline">
@@ -57,7 +60,9 @@ const topLevelKeys = computed(() => (gsi.data ? Object.keys(gsi.data).length : 0
         <UIcon name="i-lucide-radio" class="h-5 w-5 text-muted" />
       </div>
       <p class="mt-3 text-sm font-medium text-muted">No GSI data received yet.</p>
-      <p class="mt-1 text-xs text-dimmed">Start CS2 with ZhenHai GSI enabled to see live data here.</p>
+      <p class="mt-1 text-xs text-dimmed">
+        Start CS2 with ZhenHai GSI enabled to see live data here.
+      </p>
     </div>
   </div>
 </template>

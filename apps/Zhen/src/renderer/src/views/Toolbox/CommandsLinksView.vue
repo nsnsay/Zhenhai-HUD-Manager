@@ -52,7 +52,9 @@ const usefulLinks = [
   <div class="flex h-full min-h-0 flex-col gap-5">
     <div>
       <h2 class="text-lg font-semibold leading-6">Commands & Links</h2>
-      <p class="mt-1 text-sm text-muted">Local endpoints and useful references for ZhenHai development.</p>
+      <p class="mt-1 text-sm text-muted">
+        Local endpoints and useful references for ZhenHai development.
+      </p>
     </div>
 
     <section class="flex flex-col gap-3">
@@ -62,12 +64,18 @@ const usefulLinks = [
       </div>
 
       <div class="grid gap-3 md:grid-cols-2">
-        <UCard v-for="resource in localResources" :key="resource.label" :ui="{
-          root: 'rounded-lg border border-default/40 bg-elevated/30 shadow-sm backdrop-blur-xl',
-          body: 'sm:p-3',
-        }">
+        <UCard
+          v-for="resource in localResources"
+          :key="resource.label"
+          :ui="{
+            root: 'rounded-lg border border-default/40 bg-elevated/30 shadow-sm backdrop-blur-xl',
+            body: 'sm:p-3',
+          }"
+        >
           <div class="flex items-start gap-3">
-            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated/70 text-primary">
+            <div
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated/70 text-primary"
+            >
               <UIcon :name="resource.icon" class="h-4 w-4" />
             </div>
             <div class="min-w-0 flex-1">
@@ -87,16 +95,28 @@ const usefulLinks = [
       </div>
 
       <div class="grid gap-3 md:grid-cols-3">
-        <UCard v-for="link in usefulLinks" :key="link.label" :ui="{
-          root: 'rounded-lg border border-default/40 bg-elevated/30 shadow-sm backdrop-blur-xl',
-          body: 'p-4 sm:p-5',
-        }">
+        <UCard
+          v-for="link in usefulLinks"
+          :key="link.label"
+          :ui="{
+            root: 'rounded-lg border border-default/40 bg-elevated/30 shadow-sm backdrop-blur-xl',
+            body: 'p-4 sm:p-5',
+          }"
+        >
           <div class="flex h-full flex-col">
             <UIcon :name="link.icon" class="h-5 w-5 text-primary" />
             <div class="mt-3 text-sm font-semibold">{{ link.label }}</div>
             <p class="mt-2 flex-1 text-xs leading-5 text-muted">{{ link.description }}</p>
-            <UButton label="Open" icon="i-lucide-external-link" color="neutral" variant="ghost" size="sm"
-              class="mt-3 justify-start" :to="link.href" target="_blank" />
+            <UButton
+              label="Open"
+              icon="i-lucide-external-link"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              class="mt-3 justify-start"
+              :to="link.href"
+              target="_blank"
+            />
           </div>
         </UCard>
       </div>

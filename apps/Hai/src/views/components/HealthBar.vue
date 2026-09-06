@@ -24,9 +24,7 @@ const HealthBarDirection = computed(() => {
   } else return ''
 })
 
-const damagePercent = computed(() =>
-  Math.min(100, Math.max(0, damageAmount.value)),
-)
+const damagePercent = computed(() => Math.min(100, Math.max(0, damageAmount.value)))
 
 const damageStyle = computed(() => {
   if (props.direction === 'top-bottom') {
@@ -51,14 +49,20 @@ const damageStyle = computed(() => {
     left: `${health.value}%`,
   }
 })
-
 </script>
 
 <template>
   <div class="HealthBar_Container" :class="[direction, customClassName]">
-    <div class="HealthBar" :class="[{ '!': borderRadiusForFocusedPlayer }]" :style="HealthBarDirection">
-    </div>
-    <div class="HealthBar_Damage" :class="{ 'is-visible': damageVisible && damageAmount > 0 }" :style="damageStyle" />
+    <div
+      class="HealthBar"
+      :class="[{ '!': borderRadiusForFocusedPlayer }]"
+      :style="HealthBarDirection"
+    ></div>
+    <div
+      class="HealthBar_Damage"
+      :class="{ 'is-visible': damageVisible && damageAmount > 0 }"
+      :style="damageStyle"
+    />
   </div>
 </template>
 
@@ -99,7 +103,6 @@ const damageStyle = computed(() => {
   }
 
   @media (prefers-reduced-motion: reduce) {
-
     .HealthBar,
     .HealthBar_Damage {
       transition: none !important;

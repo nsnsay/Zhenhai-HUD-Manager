@@ -12,7 +12,6 @@ import type {
 } from "../types/database.types";
 import { logger } from "./logger.service";
 
-
 const COLLECTIONS: CollectionName[] = ["extras", "players", "teams", "matchs", "tournaments"];
 
 interface DbSchema {
@@ -21,14 +20,12 @@ interface DbSchema {
 
 const DEFAULT_DATA: DbSchema = { records: [] };
 
-
 export class DatabaseService {
   private static instance: DatabaseService;
   private dbs: Map<CollectionName, LowSync<DbSchema>> = new Map();
   private dataDir: string;
 
   private constructor() {
-    
     this.dataDir = join(app.getPath("documents"), "ZhenHai");
     mkdirSync(this.dataDir, { recursive: true });
     this.initDatabases();
@@ -42,7 +39,6 @@ export class DatabaseService {
     return DatabaseService.instance;
   }
 
-  
   private initDatabases(): void {
     for (const name of COLLECTIONS) {
       const filePath = join(this.dataDir, `${name}.json`);
@@ -57,18 +53,15 @@ export class DatabaseService {
     return this.dbs.get(collection) ?? null;
   }
 
-  
-
-    create(collection: CollectionName, data: Record<string, any>): CrudResult<DatabaseRecord> {
+  create(collection: CollectionName, data: Record<string, any>): CrudResult<DatabaseRecord> {
     const db = this.getDb(collection);
     if (!db) return { success: false, error: `Invalid collection: ${collection}` };
 
-    
     const { id: _id, createdAt: _c, updatedAt: _u, ...safeData } = data;
 
     const now = new Date().toISOString();
     const record: DatabaseRecord = {
-      id: randomUUID(), 
+      id: randomUUID(),
       ...safeData,
       createdAt: now,
       updatedAt: now,
@@ -78,7 +71,7 @@ export class DatabaseService {
     return { success: true, data: record };
   }
 
-    read(collection: CollectionName, id: string): CrudResult<DatabaseRecord> {
+  read(collection: CollectionName, id: string): CrudResult<DatabaseRecord> {
     const db = this.getDb(collection);
     if (!db) return { success: false, error: `Invalid collection: ${collection}` };
 
@@ -88,20 +81,18 @@ export class DatabaseService {
     return { success: true, data: record };
   }
 
-    list(collection: CollectionName, options?: QueryOptions): CrudResult<DatabaseRecord[]> {
+  list(collection: CollectionName, options?: QueryOptions): CrudResult<DatabaseRecord[]> {
     const db = this.getDb(collection);
     if (!db) return { success: false, error: `Invalid collection: ${collection}` };
 
     let records = [...db.data.records];
 
-    
     if (options?.where && Object.keys(options.where).length > 0) {
       records = records.filter((record) =>
         Object.entries(options.where!).every(([key, value]) => record[key] === value),
       );
     }
 
-    
     if (options?.orderBy) {
       const { field, order = "asc" } = options.orderBy;
       records.sort((a, b) => {
@@ -116,7 +107,6 @@ export class DatabaseService {
       });
     }
 
-    
     const total = records.length;
     if (options?.offset != null) records = records.slice(options.offset);
     if (options?.limit != null) records = records.slice(0, options.limit);
@@ -124,7 +114,7 @@ export class DatabaseService {
     return { success: true, data: records, meta: { total } } as CrudResult<DatabaseRecord[]>;
   }
 
-    update(
+  update(
     collection: CollectionName,
     id: string,
     data: Record<string, any>,
@@ -135,7 +125,6 @@ export class DatabaseService {
     const index = db.data.records.findIndex((r) => r.id === id);
     if (index === -1) return { success: false, error: `Record not found: ${id}` };
 
-    
     const { id: _id, createdAt: _createdAt, ...safeData } = data;
 
     const updated: DatabaseRecord = {
@@ -152,7 +141,7 @@ export class DatabaseService {
     return { success: true, data: updated };
   }
 
-    delete(collection: CollectionName, id: string): CrudResult<{ id: string }> {
+  delete(collection: CollectionName, id: string): CrudResult<{ id: string }> {
     const db = this.getDb(collection);
     if (!db) return { success: false, error: `Invalid collection: ${collection}` };
 

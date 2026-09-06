@@ -181,9 +181,7 @@ function openEdit(match: MatchRecord) {
     matchType: match.matchType,
     matchLength: match.matchLength,
     matchVeto: match.matchVeto
-      ? normalizeMatchVeto(
-        JSON.parse(JSON.stringify(match.matchVeto)) as MatchsInfo["matchVeto"],
-      )
+      ? normalizeMatchVeto(JSON.parse(JSON.stringify(match.matchVeto)) as MatchsInfo["matchVeto"])
       : generateVetoStructure(match.matchLength as number),
     matchTeamA: match.matchTeamA,
     matchTeamB: match.matchTeamB,
@@ -276,23 +274,38 @@ async function handleSubmit(close: () => void) {
 </script>
 
 <template>
-  <UModal v-model:open="open" :title="editId ? 'Edit Match' : 'Create Match'"
+  <UModal
+    v-model:open="open"
+    :title="editId ? 'Edit Match' : 'Create Match'"
     :description="editId ? 'Update match information' : 'Match Veto, Match Versus, Match Info'"
-    :ui="{ footer: 'justify-end', content: 'min-w-184', body: 'scrollbar-none', header: 'py-6' }">
+    :ui="{ footer: 'justify-end', content: 'min-w-184', body: 'scrollbar-none', header: 'py-6' }"
+  >
     <UButton icon="i-lucide-plus" label="Create Match" color="primary" />
     <template #body>
       <div class="flex justify-between w-full">
         <UFormField label="Team A" name="Team A">
-          <USelect v-model="matchData.matchTeamA" :items="teamAItems" value-key="value" :icon="iconTeamA" class="w-48"
+          <USelect
+            v-model="matchData.matchTeamA"
+            :items="teamAItems"
+            value-key="value"
+            :icon="iconTeamA"
+            class="w-48"
             :ui="{
               trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-            }" />
+            }"
+          />
         </UFormField>
         <UFormField label="Team B" name="Team B">
-          <USelect v-model="matchData.matchTeamB" :items="teamBItems" value-key="value" :icon="iconTeamB" class="w-48"
+          <USelect
+            v-model="matchData.matchTeamB"
+            :items="teamBItems"
+            value-key="value"
+            :icon="iconTeamB"
+            class="w-48"
             :ui="{
               trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-            }" />
+            }"
+          />
         </UFormField>
       </div>
       <div class="flex justify-between w-full">
@@ -305,39 +318,71 @@ async function handleSubmit(close: () => void) {
       </div>
       <div class="flex justify-between w-full">
         <UFormField label="Best Of" name="Best Of">
-          <USelect v-model="matchData.matchLength as number" :items="bestOfItems" value-key="value" class="w-48" :ui="{
-            trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-          }" />
+          <USelect
+            v-model="matchData.matchLength as number"
+            :items="bestOfItems"
+            value-key="value"
+            class="w-48"
+            :ui="{
+              trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
+            }"
+          />
         </UFormField>
         <UFormField label="Match Phase/Stage" name="Match Phase">
-          <USelect v-model="matchData.matchType" :items="matchTypeItems" value-key="value" class="w-48" :ui="{
-            trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
-          }" />
+          <USelect
+            v-model="matchData.matchType"
+            :items="matchTypeItems"
+            value-key="value"
+            class="w-48"
+            :ui="{
+              trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200',
+            }"
+          />
         </UFormField>
       </div>
       <USeparator class="text-[13px]">Map Vetos</USeparator>
       <div class="flex justify-between w-full rounded flex-col mt-2 gap-2">
-        <div v-for="(map, index) in matchData.matchVeto" :key="`${open}-${editId ?? 'create'}-${index}`"
-          class="flex w-full gap-1 py-2 rounded border-muted">
+        <div
+          v-for="(map, index) in matchData.matchVeto"
+          :key="`${open}-${editId ?? 'create'}-${index}`"
+          class="flex w-full gap-1 py-2 rounded border-muted"
+        >
           <UFormField :label="`Map ${index + 1}`" name="Match Phase">
-            <USelect v-model="map.mapName" :items="mapItems" value-key="value" class="w-38" :ui="{
-              trailingIcon:
-                'group-data-[state=open]:rotate-180 transition-transform duration-200',
-            }" />
+            <USelect
+              v-model="map.mapName"
+              :items="mapItems"
+              value-key="value"
+              class="w-38"
+              :ui="{
+                trailingIcon:
+                  'group-data-[state=open]:rotate-180 transition-transform duration-200',
+              }"
+            />
           </UFormField>
           <UFormField label="Veto Type" name="Match Phase">
-            <USelect v-model="map.mapVetoType" :items="vetoTypeItems" class="w-38" :ui="{
-              trailingIcon:
-                'group-data-[state=open]:rotate-180 transition-transform duration-200',
-            }" />
+            <USelect
+              v-model="map.mapVetoType"
+              :items="vetoTypeItems"
+              class="w-38"
+              :ui="{
+                trailingIcon:
+                  'group-data-[state=open]:rotate-180 transition-transform duration-200',
+              }"
+            />
           </UFormField>
           <template v-if="map.mapVetoType === 'pick'">
             <UFormField label="Pick Team" name="Match Phase">
-              <USelect v-model="map.mapPickTeam" :default-value="map.mapPickTeam" :items="teamItems" value-key="value"
-                class="w-36" :ui="{
+              <USelect
+                v-model="map.mapPickTeam"
+                :default-value="map.mapPickTeam"
+                :items="teamItems"
+                value-key="value"
+                class="w-36"
+                :ui="{
                   trailingIcon:
                     'group-data-[state=open]:rotate-180 transition-transform duration-200',
-                }" />
+                }"
+              />
             </UFormField>
             <UFormField label="Pick Team Score" name="Match Phase">
               <UInputNumber class="w-24" v-model="map.mapPickTeamScore as number" />
@@ -359,8 +404,12 @@ async function handleSubmit(close: () => void) {
     </template>
     <template #footer="{ close }">
       <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-      <UButton :label="editId ? 'Update' : 'Submit'" color="neutral" :loading="isSubmitting"
-        @click="handleSubmit(close)" />
+      <UButton
+        :label="editId ? 'Update' : 'Submit'"
+        color="neutral"
+        :loading="isSubmitting"
+        @click="handleSubmit(close)"
+      />
     </template>
   </UModal>
 </template>

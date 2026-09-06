@@ -16,7 +16,10 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="ZHENHAI__OVERLAY__MAIN__1 transition-opacity duration-200" :class="[{ 'opacity-0': !ready }]">
+  <div
+    class="ZHENHAI__OVERLAY__MAIN__1 transition-opacity duration-200"
+    :class="[{ 'opacity-0': !ready }]"
+  >
     <Transition name="overlay-panel" appear>
       <div v-if="gsi.settings?.overlayPlayerFocusedMode">
         <FocusedPlayer :players="gsi.players" />
