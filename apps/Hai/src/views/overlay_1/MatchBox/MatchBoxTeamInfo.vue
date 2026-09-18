@@ -621,9 +621,9 @@ onUnmounted(() => {
       />
 
       <div
-        class="flex-2 w-full h-full flex items-center justify-center font-bold text-2xl text-sec/90 text-shadow-sm text-shadow-pri z-1"
+        class="flex-2 w-full h-full flex items-center justify-center font-bold text-2xl text-center text-sec/90 text-shadow-sm text-shadow-pri z-1"
       >
-        {{ team._db?.teamShortName }}
+        {{ team._db?.teamShortName || team.name }}
       </div>
 
       <div

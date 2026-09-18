@@ -1,6 +1,6 @@
-import { CSGOGSI } from "@zhenhai/csgogsi";
 import { EventEmitter } from "events";
-import type { CSGO, Events } from "@zhenhai/csgogsi/types";
+import type { Events, GameState, GameStateRaw } from "@zhenhai/csgogsi/types";
+import { ZhenHaiGSI } from "./gsi-enrich.service";
 import type { GsiPipeline } from "./gsi-pipeline.service";
 import { logger } from "./logger.service";
 
@@ -9,14 +9,19 @@ type ExcludedGsiEvent = "raw" | "newListener" | "removeListener";
 export type ForwardedGsiEvent = Exclude<keyof Events, ExcludedGsiEvent>;
 
 /**
- * 使用 Record<ForwardedGsiEvent, true> 保证这里必须包含
- * Events 里面除了 raw / newListener / removeListener 之外的所有事件。
+ * 使用 Record<ForwardedGsiEvent, true> 保证这里必须包含 Events 里面除了
+ * raw / newListener / removeListener 之外的所有事件。
  *
- * 如果后续 events.d.ts 增加事件但这里没补，会直接产生 TS 编译错误。
+ * 上游 csgogsi 6.x 新增 roundStart / observerTargetChange / mapEnd 后，
+ * 这里如果没有补齐会直接产生 TS 编译错误（这是刻意的保护）。
  */
 const FORWARDED_GSI_EVENT_MAP: Record<ForwardedGsiEvent, true> = {
   data: true,
+  roundStart: true,
+  observerTargetChange: true,
   roundEnd: true,
+  mapEnd: true,
+  // @deprecated 上游 6.x 已用 mapEnd 取代 matchEnd；这里继续转发以兼容既有前端订阅。
   matchEnd: true,
   overtime: true,
   kill: true,
@@ -44,6 +49,15 @@ const FORWARDED_GSI_EVENT_MAP: Record<ForwardedGsiEvent, true> = {
 
 export const FORWARDED_GSI_EVENTS = Object.keys(FORWARDED_GSI_EVENT_MAP) as ForwardedGsiEvent[];
 
+/**
+ * 上游 TypedEventEmitter 的 on/off 是按单个事件名做类型推导的，
+ * 这里用联合事件名批量注册，因此退化成结构化的最小接口。
+ */
+type GsiEventTarget = {
+  on: (event: string, listener: (...args: unknown[]) => void) => unknown;
+  off: (event: string, listener: (...args: unknown[]) => void) => unknown;
+};
+
 export class GsiService extends EventEmitter {
   private static instance: GsiService;
 
@@ -52,21 +66,26 @@ export class GsiService extends EventEmitter {
    */
   private static readonly RESOLVED: Promise<void> = Promise.resolve();
 
-  private gsi: CSGOGSI;
+  private gsi: ZhenHaiGSI;
+  private gsiEvents: GsiEventTarget;
   private pipeline: GsiPipeline | null = null;
 
   /**
-   * 避免异步 pipeline 错误重复刷屏。
+   * 避免增强管线的同步异常重复刷屏。
    */
   private pipelineSyncErrorLogged = false;
 
   private constructor() {
     super();
 
-    this.gsi = new CSGOGSI();
+    this.gsi = new ZhenHaiGSI({
+      shouldEnrich: () => this.shouldApplyPipeline(),
+      enrich: (data) => this.applyEnrichment(data),
+      onWarn: (message, meta) => logger.warn("GsiService", message, meta),
+    });
+    this.gsiEvents = this.gsi as unknown as GsiEventTarget;
 
     this.registerEvents();
-    this.bindPreEmitTransform();
 
     logger.info("GsiService", "Initialized");
   }
@@ -84,28 +103,11 @@ export class GsiService extends EventEmitter {
     logger.info("GsiService", "Pipeline attached");
   }
 
-  private bindPreEmitTransform(): void {
-    const gsi = this.gsi as any;
-
-    if (typeof gsi.setPreEmitTransform !== "function") {
-      logger.warn(
-        "GsiService",
-        "Current CSGOGSI does not support setPreEmitTransform. Events will not be enhanced by pipeline.",
-      );
-
-      return;
-    }
-
-    gsi.setPreEmitTransform((data: CSGO) => {
-      return this.applyPipelineBeforeEmit(data);
-    });
-  }
-
   /**
-   * 判断是否真的需要执行 pipeline。
+   * 判断是否真的需要执行增强管线。
    *
    * 如果没有任何 gsi:data 监听器，也没有任何 GSI 事件监听器，
-   * 则跳过 pipeline，避免无意义 CPU 消耗。
+   * 则跳过管线，避免无意义 CPU 消耗。
    */
   private shouldApplyPipeline(): boolean {
     if (this.listenerCount("gsi:data") > 0) {
@@ -118,30 +120,31 @@ export class GsiService extends EventEmitter {
   }
 
   /**
-   * 在 CSGOGSI 触发事件前执行同步 pipeline。
+   * [ZhenHai] 增强入口。
+   *
+   * 旧 fork 在 CSGOGSI.digest 内部调用 setPreEmitTransform；上游 6.x 没有该钩子，
+   * 现在由 ZhenHaiGSI 覆写 emit，在事件派发前同步调用这里，语义保持一致：
+   * roundEnd / mvp / bombPlant / phaseChange 等事件携带的 players / team / bomb.player
+   * 都已经是增强后的对象。
    */
-  private applyPipelineBeforeEmit(data: CSGO): CSGO {
+  private applyEnrichment(data: GameState): GameState {
     const pipeline = this.pipeline;
 
     if (!pipeline) {
       return data;
     }
 
-    if (!this.shouldApplyPipeline()) {
-      return data;
-    }
-
     try {
       const result = pipeline.processSync(data);
 
-      return result ?? data;
+      return (result ?? data) as GameState;
     } catch (error) {
       if (!this.pipelineSyncErrorLogged) {
         this.pipelineSyncErrorLogged = true;
 
         logger.error(
           "GsiService",
-          "preEmit pipeline failed. When using CSGOGSI setPreEmitTransform, pipeline must be synchronous.",
+          "GSI 增强管线执行失败：同步管线不允许中间件返回 Promise。",
           error,
         );
       }
@@ -153,11 +156,9 @@ export class GsiService extends EventEmitter {
   }
 
   /**
-   * 现在 digest 不再二次执行 pipeline。
-   *
-   * 因为 pipeline 已经在 CSGOGSI.digest 内部、事件触发前执行。
+   * 增强已经在 CSGOGSI 内部、事件触发前完成，这里不再二次执行管线。
    */
-  digest(data: any): Promise<void> {
+  digest(data: GameStateRaw): Promise<void> {
     try {
       const parsed = this.gsi.digest(data);
 
@@ -184,25 +185,20 @@ export class GsiService extends EventEmitter {
   }
 
   /**
-   * 监听 CSGOGSI 的所有目标事件。
+   * 监听上游 CSGOGSI 的所有目标事件。
    *
-   * 排除：
-   * - raw
-   * - newListener
-   * - removeListener
-   *
-   * 注意：
-   * 这些事件现在都已经是 preEmitTransform / pipeline 处理后的数据。
+   * 排除：raw / newListener / removeListener。
+   * 这些事件携带的都是增强后的数据。
    */
   private registerEvents(): void {
     for (const eventName of FORWARDED_GSI_EVENTS) {
-      const listener = (...args: any[]) => {
+      const listener = (...args: unknown[]) => {
         if (this.listenerCount(eventName) > 0) {
           this.emit(eventName, ...args);
         }
       };
 
-      (this.gsi as any).on(eventName, listener);
+      this.gsiEvents.on(eventName, listener);
     }
   }
 }

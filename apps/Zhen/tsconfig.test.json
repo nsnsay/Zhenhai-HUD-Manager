@@ -1,19 +1,23 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022"],
     "module": "preserve",
     "moduleResolution": "bundler",
-    "moduleDetection": "force",
-    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts", "utils/**/*.ts"]
+  "include": [
+    "src/main/services/gsi-enrich.service.ts",
+    "src/main/services/__tests__/**/*.ts"
+  ]
 }

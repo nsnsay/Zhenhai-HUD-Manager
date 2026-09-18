@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { CSGO } from '@zhenhai/csgogsi/types'
 import SvgIcon from '@/views/components/SvgIcon.vue'
-import { computed } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
+import { useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
 
 const props = defineProps<{
   gsi: CSGO
 }>()
+
+const DEFAULT_REGULATION_MR = 12
+const DEFAULT_OVERTIME_MR = 3
+const ROUND_PULSE_MS = 240
 
 function secondToTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)
@@ -21,6 +26,69 @@ const formattedTime = computed(() => {
   totalSeconds = Math.max(0, totalSeconds)
   return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`
 })
+
+/**
+ * map.round 是「已结束回合数」：常规情况 +1，gameover 时保持原值，
+ * 与 Zhen 端 DatabaseOverview 的口径保持一致。
+ */
+const currentRound = computed(() => {
+  const map = props.gsi?.map
+
+  if (!map) {
+    return 1
+  }
+
+  return map.phase === 'gameover' ? map.round : map.round + 1
+})
+
+const regulationMR = computed(() => props.gsi?.map?.regularMR ?? DEFAULT_REGULATION_MR)
+const overtimeMR = computed(() => props.gsi?.map?.overtimeMR ?? DEFAULT_OVERTIME_MR)
+
+/**
+ * 常规 2 * regulationMR 回合；进入加时后按 2 * overtimeMR 一段递增。
+ */
+const totalRounds = computed(() => {
+  const regulationRounds = regulationMR.value * 2
+  const round = currentRound.value
+
+  if (round <= regulationRounds) {
+    return regulationRounds
+  }
+
+  const overtimeRounds = Math.max(1, overtimeMR.value) * 2
+  const overtimes = Math.ceil((round - regulationRounds) / overtimeRounds)
+
+  return regulationRounds + overtimes * overtimeRounds
+})
+
+const isOvertime = computed(() => currentRound.value > regulationMR.value * 2)
+
+/**
+ * roundStart 只用来触发数字切换动画；数值仍然是上面的派生计算结果，
+ * 避免出现两套「当前回合」真源。
+ */
+const roundPulse = ref(false)
+let pulseTimer: number | null = null
+
+useGsiEvent('roundStart', () => {
+  roundPulse.value = true
+
+  if (pulseTimer !== null) {
+    window.clearTimeout(pulseTimer)
+  }
+
+  pulseTimer = window.setTimeout(() => {
+    roundPulse.value = false
+    pulseTimer = null
+  }, ROUND_PULSE_MS)
+})
+
+onUnmounted(() => {
+  if (pulseTimer !== null) {
+    window.clearTimeout(pulseTimer)
+    pulseTimer = null
+  }
+})
 </script>
 
 <template>
@@ -33,9 +101,26 @@ const formattedTime = computed(() => {
     <SvgIcon v-else size="32px" name="icon-ui-bomb_c4" />
     <div class="flex flex-row items-center justify-center gap-1 text-sec/60">
       <div class="font-semibold text-xs">Round</div>
-      <div class="font-semibold text-xs">{{ gsi.map.round }}/24</div>
+      <div
+        class="round-counter font-semibold text-xs transition-transform duration-200 ease-out"
+        :class="{ 'scale-110': roundPulse }"
+      >
+        {{ currentRound }}/{{ totalRounds }}
+      </div>
+      <div
+        v-if="isOvertime"
+        class="rounded-sm bg-sec/20 px-1 text-[10px] font-bold leading-4 text-sec/80"
+      >
+        OT
+      </div>
     </div>
   </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped>
+@media (prefers-reduced-motion: reduce) {
+  .round-counter {
+    transition: none;
+  }
+}
+</style>

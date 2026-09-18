@@ -19,11 +19,10 @@ const props = defineProps<{
     <div :class="[{ isDead: player.isDead, 'outline-2': player.isFocused }]"
       class="player-info-box flex flex-col w-80 h-22 rounded-(--hai-radius) relative">
       <div class="absolute inset-0 w-full flex flex-row z-10 overflow-hidden group-[&.T]:flex-row-reverse">
-        <div class="w-26 h-full relative z-20">
-          <PlayerAvatar class="w-full mask-b-from-30% absolute inset-0 z-10 aspect-square scale-125 translate-y-3"
-            :player="player" size="both" />
+        <div class="w-23 h-full relative z-20">
+          <PlayerAvatar class="w-full mask-b-from-30% absolute inset-0 z-10 aspect-square scale-125 translate-y-4" :player="player" size="both" />
         </div>
-        <div class="flex-1 flex flex-col w-full h-full group-[&.T]:items-end">
+        <div class="flex-1 flex flex-col w-full h-full group-[&.T]:items-end z-100">
           <div class="flex flex-row justify-start items-center w-full h-7 gap-1 group-[&.T]:flex-row-reverse">
             <Bomb v-if="player.isBomb" image-size="20px" :bomb="player.isBomb" />
             <DefuseKit v-if="player.state.defusekit" image-size="20px" :defusekit="player.state.defusekit" />

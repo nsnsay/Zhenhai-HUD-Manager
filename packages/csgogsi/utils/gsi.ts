@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { getCurrentScope, markRaw, onScopeDispose, ref, shallowRef } from "vue";
 import { io, type Socket } from "socket.io-client";
-import type { CSGO, Events } from "../src/interfaces";
+import type { GameState, Events } from "csgogsi";
 
 /**
  * 排除服务端不会转发、或者不适合客户端监听的事件。
@@ -18,8 +18,12 @@ export type GsiEventListener<K extends GsiEventName> = Events[K];
  */
 const GSI_EVENT_MAP: Record<GsiEventName, true> = {
   data: true,
+  roundStart: true,
+  observerTargetChange: true,
   roundEnd: true,
+  // @deprecated 上游 6.x 已标记 matchEnd；保留转发以兼容既有前端，新代码请用 mapEnd。
   matchEnd: true,
+  mapEnd: true,
   overtime: true,
   kill: true,
   hurt: true,
@@ -65,7 +69,7 @@ export interface GsiConnectOptions {
 export const useGsiStore = defineStore("gsi", () => {
   const socket = shallowRef<Socket | null>(null);
   const connected = ref(false);
-  const data = shallowRef<CSGO | null>(null);
+  const data = shallowRef<GameState | null>(null);
 
   const refreshCallbacks = new Set<() => void>();
   const listeners = new Map<GsiEventName, Set<(...args: any[]) => void>>();
@@ -79,7 +83,7 @@ export const useGsiStore = defineStore("gsi", () => {
   };
 
   let frameSyncEnabled = false;
-  let pendingData: CSGO | null = null;
+  let pendingData: GameState | null = null;
   let frameScheduled = false;
   let frameId: number | null = null;
 
@@ -93,7 +97,7 @@ export const useGsiStore = defineStore("gsi", () => {
     }
   }
 
-  function scheduleData(raw: CSGO): void {
+  function scheduleData(raw: GameState): void {
     pendingData = raw;
 
     if (frameScheduled) {
@@ -127,7 +131,7 @@ export const useGsiStore = defineStore("gsi", () => {
     pendingData = null;
   }
 
-  function setData(raw: CSGO | null): void {
+  function setData(raw: GameState | null): void {
     if (!raw) {
       cancelPendingData();
       data.value = null;
@@ -153,7 +157,7 @@ export const useGsiStore = defineStore("gsi", () => {
     }
   }
 
-  function handleGsiData(raw: CSGO): void {
+  function handleGsiData(raw: GameState): void {
     setData(raw);
 
     const set = listeners.get("data");
@@ -163,7 +167,7 @@ export const useGsiStore = defineStore("gsi", () => {
     }
 
     for (const listener of set) {
-      (listener as (data: CSGO) => void)(raw);
+      (listener as (data: GameState) => void)(raw);
     }
   }
 

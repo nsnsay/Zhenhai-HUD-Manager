@@ -1,8 +1,14 @@
+/**
+ * [ZhenHai] 本仓库的业务类型（与原 packages/csgogsi/src/info.d.ts 保持一致）。
+ *
+ * 这些类型不属于上游 csgogsi，只是历史上挂在同一个包下对外导出。
+ * 迁移到薄壳后原样保留，确保 `@zhenhai/csgogsi/types` 的导入方零改动。
+ */
 export interface MatchsInfo {
   matchType: string;
   matchLength: number;
   matchVeto: MapVeto[];
-  matchTeamA: string; // 建议改为 string，因为实际存的是 Team ID
+  matchTeamA: string; // 实际存的是 Team ID
   matchTeamB: string;
   matchTeamAScore: number;
   matchTeamBScore: number;
@@ -70,7 +76,7 @@ export interface PlayerInfo {
   playerAvatar: string;
   playerSteamID: string;
   playerCountry: string;
-  extras?: Record;
+  extras?: Record<string, unknown>;
 }
 
 export interface PlayerFormData {
@@ -88,7 +94,7 @@ export interface TeamFormData {
   teamLogo: string;
   teamCountry: string;
   teamGameName: string;
-  playerIds: string[]; // ✅ 新增：关联玩家 ID 列表
+  playerIds: string[];
 }
 
 export type ComponentMode = false | "mode1" | "mode2";

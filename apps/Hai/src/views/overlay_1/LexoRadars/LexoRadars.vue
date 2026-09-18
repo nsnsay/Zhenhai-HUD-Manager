@@ -328,11 +328,11 @@ const bombElements = computed<BombElement[]>(() => {
 </script>
 
 <template>
-  <div :class="['radar-container']">
+  <div :class="['radar-container shadow-pri/20 shadow-sm ring ring-sec/40']">
     <div class="map-containers">
       <div class="map-container" :style="containerStyle">
         <template v-if="isSupportedMap">
-          <div class="map" :style="mapStyle">
+          <div class="map drop-shadow-pri drop-shadow-xl" :style="mapStyle">
             <!-- Players -->
             <div
               v-for="player in playersExtended"
