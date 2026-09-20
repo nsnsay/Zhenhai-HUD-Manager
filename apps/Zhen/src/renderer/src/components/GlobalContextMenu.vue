@@ -85,7 +85,7 @@ const items = computed<DropdownMenuItem[][]>(() => {
 </script>
 
 <template>
-  <UContextMenu :items="items" :ui="{ content: 'w-52 z-10' }">
+  <UContextMenu :items="items" :ui="{ content: 'w-52 z-10 bg-default/70 backdrop-blur-md' }">
     <div class="w-full h-full" @contextmenu.capture="contextMenuStore.clearContext()">
       <slot />
     </div>

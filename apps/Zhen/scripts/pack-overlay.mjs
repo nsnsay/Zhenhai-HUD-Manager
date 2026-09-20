@@ -2,20 +2,23 @@
  * 把构建好的 Overlay（apps/Zhen/resources/overlay）压成可再分发的 zip。
  *
  * - 生成前把 apps/Zhen/package.json 的版本号写入产物里的 overlay.json（单一版本来源）；
- * - 输出到 resources/overlay-bundles/zhenhai-default-<version>.zip，由 electron-builder 作为
- *   extraResources 打进安装包，用户也能直接用「导入 Overlay (.zip)」重新导入。
+ * - 输出到仓库根目录 dist/zhenhai-default-<version>.zip：仅作为可再分发的资源包存在，
+ *   electron-builder 不引用该目录，因此绝不会被打进 Electron 安装包；
+ *   用户可以直接用「导入 Overlay (.zip)」重新导入。
  */
 import { createRequire } from "node:module";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const AdmZip = require("adm-zip");
 
 const appRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(appRoot, "..", "..");
 const overlayDir = join(appRoot, "resources", "overlay");
-const bundlesDir = join(appRoot, "resources", "overlay-bundles");
+/** 产物目录：仓库根目录 dist/，与 Electron 打包产物彼此独立。 */
+const bundlesDir = join(repoRoot, "dist");
 const bundlePrefix = "zhenhai-default";
 
 if (!existsSync(join(overlayDir, "index.html"))) {
@@ -49,4 +52,4 @@ zip.addLocalFolder(overlayDir);
 const target = join(bundlesDir, `${bundlePrefix}-${version}.zip`);
 zip.writeZip(target);
 
-console.log(`[pack-overlay] ${relative(appRoot, target)} (${statSync(target).size} bytes)`);
+console.log(`[pack-overlay] ${relative(repoRoot, target)} (${statSync(target).size} bytes)`);

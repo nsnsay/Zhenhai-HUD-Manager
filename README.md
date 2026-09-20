@@ -1,140 +1,155 @@
 # Zhen-Hai HUD Manager
 
-[中文文档](./README_ZH.md)
+![Platform](https://img.shields.io/badge/platform-Windows%20x64-informational)
+![Bun](https://img.shields.io/badge/bun-1.3.14-black)
+![Vue](https://img.shields.io/badge/vue-3-42b883)
+[![Downloads](https://img.shields.io/github/downloads/nsnsay/Zhenhai-HUD-Manager/total)](https://github.com/nsnsay/Zhenhai-HUD-Manager/releases)
 
-Previously known as Void HUD Manager, this project has been fully rebuilt and officially renamed to Zhen-Hai HUD Manager.
+[English](./README.md) | [简体中文](./README_ZH.md)
 
-The name “Zhenhai” (Chinese: 镇海) is inspired by the Zhan'ao Pagoda in Haining, Zhejiang, China.
+> Previously known as **Void HUD Manager**, the project has been fully rebuilt and officially renamed to **Zhen-Hai HUD Manager**.
+> The name "Zhenhai" (Chinese: 镇海) is inspired by the Zhan'ao Pagoda in Haining, Zhejiang, China.
 
 ## Introduction
 
-Zhen-Hai HUD Manager is a HUD management tool designed for Counter-Strike esports live broadcasts. It is used to manage tournaments, teams, players, and overlay content.
+Zhen-Hai HUD Manager is a HUD management tool for Counter-Strike esports broadcasts. It manages tournaments, teams, players and matches, enriches the live game state coming from CS2, and serves the on-air HUD to OBS or vMix.
 
-This refactor comprehensively improves the original project architecture, user interface interactions, and overall workflow, making the system clearer, more stable, and easier to use.
+Compared with the legacy Void HUD Manager, this rebuild changes the architecture, the interface and the operating flow: the former two-repository setup (`Void-HUD-Manager` + `Void-HUD-Overlay`) became a single Turborepo workspace, the code base was reorganised for maintainability, and the tournament, team, player and match workflows were redesigned.
 
-Compared with the legacy Void HUD Manager, Zhen-Hai HUD Manager delivers significant improvements in architecture, feature experience, and operational flow.
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [Architecture](./docs/en-US/architecture.md) | Processes, data flow, storage layout, overlay loading |
+| [Development](./docs/en-US/development.md) | Requirements, dev servers, scripts, tests, conventions |
+| [HTTP API](./docs/en-US/http-api.md) | Express routes, collections, `curl` examples, security boundary |
+| [Realtime API](./docs/en-US/realtime-api.md) | Socket.IO events for third-party overlays |
+| [Overlay format](./docs/en-US/overlay-format.md) | Zip import rules, the `overlay.json` manifest, effective settings |
+| [Release](./docs/en-US/release.md) | Build pipeline, installer contents, auto update |
+| [FAQ](./docs/en-US/faq.md) | Troubleshooting GSI, ports, blank overlays, zip imports |
 
 ## Key Features
 
-### Tournament Management
+### Match Data Management
 
-Supports creating and switching between multiple tournaments, reducing the need to repeatedly fill out large forms and improving tournament configuration efficiency.
+Create tournaments, teams, players and matches, then mark one match as **Live**. The live match drives team names, logos, scores and player cards on the overlay.
 
-### Improved Form Experience
+### Automatic GSI Setup
 
-The forms for matches, teams, and players have been redesigned to provide clearer field structures and more intuitive interactions.
+The Setup Wizard detects the CS2 installation through Steam and installs `gamestate_integration_zhenhai.cfg` into `<CS2>/game/csgo/cfg/`, pointing the game at the local server.
 
-### Automatic GSI File Placement
+### Overlay & HUD Customization
 
-The application can automatically detect the game installation path and place the GSI configuration file for you, reducing manual setup steps.
+Colors, corner radius, safe area and per-component visibility are configured from the Settings panel — no overlay code needs to be touched.
+
+### Overlay Management
+
+The **Overlays** page lists built-in, imported and development overlays, switches the active one, imports a `.zip` bundle into `Documents/ZhenHai/overlays`, reveals files in the file manager and deletes them again.
+
+### Third-Party Overlay Manifest
+
+A bundle can ship an `overlay.json` declaring its metadata, editable settings (`settings`), values that always win (`override`) and its own global shortcuts. Edited values are stored per overlay, and overrides only affect the payload sent to that overlay — the manager's own runtime settings are never changed by a third-party manifest.
+
+### Global Shortcuts
+
+System-wide shortcuts remove the need to alt-tab while broadcasting: refresh the overlay and toggle mouse passthrough. Both are rebindable in Settings, and overlays may declare additional shortcuts of their own.
+
+### Localization
+
+The manager interface ships in Simplified Chinese and English, defaults to the system language and can be switched in Settings.
 
 ### Automatic Updates
 
-Built-in automatic update support is included, with an improved update experience compared to previous versions.
-
-### Overlay UI Customization
-
-Supports customizing overlay colors, corner radius, safe area, and visible components, allowing users to tailor the overlay to their broadcast layout.
-
-## Technical Architecture
-
-Following this refactor, the project has been upgraded from the previous dual-repository structure:
-
-- `Void-HUD-Manager`
-- `Void-HUD-Overlay`
-
-to a single-repository structure:
-
-- `ZhenHai-HUD-Manager`
-
-The project uses Turborepo for multi-package management.
-
-### Electron Frontend
-
-Built with the following technologies:
-
-- Vue 3
-- Pinia
-- Nuxt UI
-- TailwindCSS
-- Vue Router
-
-### Electron Backend
-
-Built with the following technologies:
-
-- Electron
-- Express
-- LowDB
-- [osztenkurden/csgogsi](https://github.com/osztenkurden/csgogsi)
-
-### Overlay Layer
-
-Built with the following technologies:
-
-- Vue 3
-- Pinia
-- TailwindCSS
+Packaged builds update themselves through GitHub Releases and show download progress in Settings before offering the restart action.
 
 ## Quick Start
 
-### 1. Download and Install
+1. **Download and install** the latest `Zhenhai-<version>-setup.exe` from the Releases page.
+2. **Run the app** and finish the Setup Wizard: confirm the CS2 installation folder, install the GSI configuration and pick a window material.
+3. **Add your data** in order — players, teams, matches — then set the match you are about to broadcast to **Live**.
+4. **Start CS2.** The HUD starts receiving data as soon as the game sends GSI updates.
+5. **Open the overlay** from the application. The window starts in mouse-passthrough mode, so use the passthrough shortcut before clicking inside it.
+6. **Add a browser source** in OBS or vMix with the recommended settings.
 
-Download and install Zhen-Hai HUD Manager.
+Recommended browser source settings: width `1920`, height `1080`, URL from **Toolbox → Commands & Links**.
 
-### 2. Launch the Application
+| Purpose | URL |
+| --- | --- |
+| Built-in overlay | `http://127.0.0.1:1469/overlay/` |
+| Alias of the built-in overlay | `http://127.0.0.1:1469/hud` |
+| Imported or extra built-in overlay | `http://127.0.0.1:1469/overlays/<id>/` |
+| Overlay dev server (`bun run dev:hai`) | `http://localhost:1467/overlay/` |
 
-Start the application and follow the built-in Setup Wizard to complete the initial configuration.
+## Shortcuts
 
-### 3. Configure Tournament Data
+| Action | Default | Notes |
+| --- | --- | --- |
+| Refresh overlay | `Ctrl + Alt + I` | Broadcasts `overlay:refresh` to every connected overlay |
+| Toggle mouse passthrough | `Ctrl + Alt + M` | Switches `ignoreMouseEvents` on the overlay window |
+| Overlay-declared shortcuts | Defined by `overlay.json` | Registered only while that overlay is selected |
 
-Add the following items in order:
+Rebind shortcuts in the Settings panel by pressing the combination you want; a registration conflict is reported below the field.
 
-- Players
-- Teams
-- Matches
+## Third-Party Overlays
 
-After that, set the relevant match to Live.
+Any static web bundle can be imported as an overlay: zip it with an `index.html` in the root (or in a single wrapping folder) and import it from the **Overlays** page. The archive is validated, unpacked to `Documents/ZhenHai/overlays/<id>/` and served under `/overlays/<id>/`; selecting it reloads an already open overlay window.
 
-### 4. Launch the Game
+Overlays read live data from the local server `http://127.0.0.1:1469` over Socket.IO or REST, so they need no Electron integration. Add an `overlay.json` to declare metadata, editable settings and shortcuts. See [Overlay format](./docs/en-US/overlay-format.md) and [Realtime API](./docs/en-US/realtime-api.md).
 
-Start the game and make sure the GSI configuration is working correctly.
+## Architecture
 
-### 5. Open the Overlay
+```text
+Zhenhai-HUD-Manager/
+├── apps/
+│   ├── Zhen/        # Electron app: manager UI, local server, overlay window
+│   └── Hai/         # Overlay front-end (Vue 3), built into apps/Zhen/resources/overlay
+├── packages/
+│   └── csgogsi/     # Adapter on top of upstream csgogsi 6.0.1
+├── docs/            # Documentation (zh-CN / en-US)
+└── scripts/         # Repository tooling
+```
 
-Click the Overlay button in the application.
+| Layer | Stack |
+| --- | --- |
+| Manager UI | Vue 3, Pinia, Nuxt UI, Tailwind CSS, Vue Router, vue-i18n |
+| Main process | Electron, Express, Socket.IO, LowDB, electron-updater, electron-log |
+| Game state | [`csgogsi`](https://github.com/osztenkurden/csgogsi) 6.0.1 wrapped by `@zhenhai/csgogsi` |
+| Overlay | Vue 3, Pinia, Tailwind CSS |
 
-### 6. Add a Browser Source
+The manager process hosts everything the overlay needs: a REST API, a Socket.IO stream of enriched game state, and static hosting for overlay bundles. Details are in [Architecture](./docs/en-US/architecture.md).
 
-In OBS or vMix, add a browser source using the following recommended settings:
+## Development & Build
 
-- Width: `1920`
-- Height: `1080`
-- Source URL: Refer to the Overlay card under Commands & Links in the application
+| Requirement | Version |
+| --- | --- |
+| Bun | `1.3.14` or newer (declared through `packageManager`) |
+| Node.js | `^22.18.0` or `>=24.12.0` |
+| Windows | 10 / 11 for packaging and overlay passthrough |
 
-The default URL is usually:
+```bash
+bun install
+bun run dev        # manager + overlay dev servers
+bun run typecheck  # whole workspace
+bun run build      # Hai build, then the Windows installer for Zhen
+```
 
-`http://127.0.0.1:1469/overlay/`
+| Scope | Scripts |
+| --- | --- |
+| Root | `dev`, `dev:zhen`, `dev:hai`, `build`, `typecheck`, `lint`, `format`, `clean`, `docs:check` |
+| `apps/Zhen` | `dev`, `build`, `build:win`, `build:unpack`, `test`, `typecheck`, `pack:overlay` |
+| `apps/Hai` | `dev`, `build`, `preview`, `type-check` |
 
-After completing these steps, you can use Zhen-Hai HUD Manager in your live broadcast.
+Unit tests run on `node --test` (`bun run --cwd apps/Zhen test`) and the installer is produced by `bun run build`. More detail in [Development](./docs/en-US/development.md) and [Release](./docs/en-US/release.md).
 
-## Summary of Improvements
-
-Compared with previous versions, Zhen-Hai HUD Manager introduces the following changes:
-
-- Migrated from two GitHub repositories to a single Turborepo repository
-- Refactored the project structure to improve maintainability
-- Improved tournament, team, player, and match management workflows
-- Added automatic detection of the game path and automatic placement of the GSI file
-- Enhanced the automatic update mechanism
-- Provided more flexible overlay UI customization options
-
-## Security notes
+## Security Notes
 
 - The local server (Express + Socket.IO) listens on `127.0.0.1` by default, so other machines on the network cannot reach it.
 - Enabling **Allow LAN access** in Settings switches it to `0.0.0.0`; any device on the same network can then read and write **every collection**, including app settings (LAN access, shortcuts, selected overlay) and the overlay list. Enable it only on a trusted network.
 - Imported third-party overlays run as local web content and **keep full application permissions** (database access, file writes, GSI config install, updater). Only import bundles you trust; removing the overlay window preload is the switch to tighten this later.
 - Zip import only validates the entry count and sizes declared in the zip header, not the real extracted size — avoid untrusted archives.
+
+See the [HTTP API](./docs/en-US/http-api.md) for the complete exposure surface.
+
 ## Acknowledgements
 
 Thanks to the following projects and communities for their support:

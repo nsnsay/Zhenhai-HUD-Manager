@@ -11,6 +11,7 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
   - "!resources/overlay/**"
   - "!resources/gamestate_integration_zhenhai.cfg"
+  - "!resources/overlay-bundles/**"
   - "!node_modules/@esbuild/**/*"
   - "!node_modules/@tailwindcss/**/*"
   - "!node_modules/lightningcss-win32-x64-msvc/**/*"
@@ -23,8 +24,6 @@ extraResources:
     to: gamestate_integration_zhenhai.cfg
   - from: resources/overlays
     to: overlays
-  - from: resources/overlay-bundles
-    to: overlay-bundles
 asarUnpack:
   - resources/**
 win:
