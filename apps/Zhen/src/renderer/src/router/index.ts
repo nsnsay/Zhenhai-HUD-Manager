@@ -8,11 +8,12 @@ import DatabaseTeamView from "@renderer/views/DatabaseView/DatabaseTeamView.vue"
 import GsiDataView from "@renderer/views/Toolbox/GsiDataView.vue";
 import CommandsLinksView from "@renderer/views/Toolbox/CommandsLinksView.vue";
 import LogsView from "@renderer/views/Toolbox/LogsView.vue";
+import OverlaysView from "@renderer/views/OverlaysView.vue";
 import { rendererLogger } from "@renderer/utils/logger";
 
 declare module "vue-router" {
   interface RouteMeta {
-    label?: string;
+    labelKey?: string;
     icon?: string;
     sidebarVisible?: boolean;
   }
@@ -24,7 +25,7 @@ const routes: RouteRecordRaw[] = [
     name: "database",
     component: DatabaseView,
     meta: {
-      label: "Database",
+      labelKey: "nav.database",
       icon: "i-lucide-database",
       sidebarVisible: true,
       defaultOpen: true,
@@ -33,22 +34,32 @@ const routes: RouteRecordRaw[] = [
       {
         path: "matchs",
         name: "matchs",
-        meta: { label: "Matchs", icon: "i-lucide-trophy", sidebarVisible: true },
+        meta: { labelKey: "nav.matchs", icon: "i-lucide-trophy", sidebarVisible: true },
         component: DatabaseMatchView,
       },
       {
         path: "teams",
         name: "teams",
-        meta: { label: "Teams", icon: "i-lucide-users", sidebarVisible: true },
+        meta: { labelKey: "nav.teams", icon: "i-lucide-users", sidebarVisible: true },
         component: DatabaseTeamView,
       },
       {
         path: "players",
         name: "players",
-        meta: { label: "Players", icon: "i-lucide-circle-user-round", sidebarVisible: true },
+        meta: { labelKey: "nav.players", icon: "i-lucide-circle-user-round", sidebarVisible: true },
         component: DatabasePlayerView,
       },
     ],
+  },
+  {
+    path: "/overlays",
+    name: "overlays",
+    component: OverlaysView,
+    meta: {
+      labelKey: "nav.overlays",
+      icon: "i-lucide-layers",
+      sidebarVisible: true,
+    },
   },
   {
     path: "/toolbox",
@@ -56,7 +67,7 @@ const routes: RouteRecordRaw[] = [
     component: ToolboxView,
     redirect: "/toolbox/gsi",
     meta: {
-      label: "Toolbox",
+      labelKey: "nav.toolbox",
       icon: "i-lucide-square-dot",
       sidebarVisible: true,
     },
@@ -66,7 +77,7 @@ const routes: RouteRecordRaw[] = [
         name: "toolbox-gsi",
         component: GsiDataView,
         meta: {
-          label: "GSI Data",
+          labelKey: "nav.gsi",
           icon: "i-lucide-binary",
         },
       },
@@ -75,7 +86,7 @@ const routes: RouteRecordRaw[] = [
         name: "toolbox-commands-links",
         component: CommandsLinksView,
         meta: {
-          label: "Commands & Links",
+          labelKey: "nav.commandsLinks",
           icon: "i-lucide-link-2",
         },
       },
@@ -84,7 +95,7 @@ const routes: RouteRecordRaw[] = [
         name: "toolbox-logs",
         component: LogsView,
         meta: {
-          label: "Logs",
+          labelKey: "nav.logs",
           icon: "i-lucide-scroll-text",
         },
       },

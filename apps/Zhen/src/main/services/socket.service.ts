@@ -3,6 +3,8 @@ import type http from "http";
 import { FORWARDED_GSI_EVENTS, type GsiService } from "./gsi.service";
 import { logger } from "./logger.service";
 
+type GsiForwardHandler = (...args: unknown[]) => void;
+
 export class SocketService {
   private static instance: SocketService;
 
@@ -15,14 +17,10 @@ export class SocketService {
   /**
    * 所有需要挂载到 GsiService 的监听器。
    *
-   * key 是 GsiService 的事件名：
-   * - `gsi:data`
-   * - `roundEnd`
-   * - `matchEnd`
-   * - `kill`
-   * - ...
+   * key 是 GsiService 的事件名（`gsi:data`、`roundEnd`、`kill` …）；
+   * `gsi:data` 是管线处理后的主数据事件，其余事件统一转发为 `gsi:事件名`。
    */
-  private readonly handlers = new Map<string, (...args: any[]) => void>();
+  private readonly handlers = new Map<string, GsiForwardHandler>();
 
   private constructor(server: http.Server) {
     this.io = new SocketIOServer(server, {
@@ -32,34 +30,18 @@ export class SocketService {
       },
     });
 
-    /**
-     * gsi:data 是 pipeline 处理后的主数据事件。
-     */
-    this.handlers.set("gsi:data", (...args: any[]) => {
+    this.handlers.set("gsi:data", (...args: unknown[]) => {
       if (this.connectionCount > 0) {
         this.io.emit("gsi:data", ...args);
       }
     });
 
-    /**
-     * 其他 CSGOGSI 事件统一转发为 `gsi:事件名`。
-     *
-     * 例如：
-     * - roundEnd -> gsi:roundEnd
-     * - matchEnd -> gsi:matchEnd
-     * - kill -> gsi:kill
-     * - hurt -> gsi:hurt
-     * - bombPlant -> gsi:bombPlant
-     *
-     * 注意：
-     * `data` 事件不在这里转发，避免和 `gsi:data` 重复。
-     */
     for (const eventName of FORWARDED_GSI_EVENTS) {
       if (eventName === "data") {
         continue;
       }
 
-      this.handlers.set(eventName, (...args: any[]) => {
+      this.handlers.set(eventName, (...args: unknown[]) => {
         if (this.connectionCount > 0) {
           this.io.emit(`gsi:${eventName}`, ...args);
         }
@@ -72,10 +54,7 @@ export class SocketService {
         connectionCount: this.connectionCount + 1,
       });
 
-      /**
-       * 第一个客户端连接时，挂载 GSI 事件。
-       * 没有客户端时不监听 GSI，避免 pipeline / Socket.IO 序列化消耗。
-       */
+      // 第一个客户端连接时挂载 GSI 事件；没有客户端时不监听，避免无谓的序列化开销。
       if (this.connectionCount === 0) {
         this.attachGsiEvents();
       }
@@ -127,9 +106,6 @@ export class SocketService {
       this.gsiService = gsiService;
     }
 
-    /**
-     * 如果绑定 GSI 时已经有客户端连接，则立即挂载事件。
-     */
     if (this.connectionCount > 0) {
       this.attachGsiEvents();
     }
@@ -137,7 +113,7 @@ export class SocketService {
     logger.info("SocketService", "GSI events bound");
   }
 
-  broadcast(event: string, data: any): void {
+  broadcast(event: string, data: unknown): void {
     if (this.connectionCount === 0) {
       return;
     }

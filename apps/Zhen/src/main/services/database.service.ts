@@ -10,9 +10,10 @@ import type {
   CrudResult,
   QueryOptions,
 } from "../types/database.types";
+import { COLLECTION_NAMES } from "../../shared/collections";
 import { logger } from "./logger.service";
 
-const COLLECTIONS: CollectionName[] = ["extras", "players", "teams", "matchs", "tournaments"];
+const COLLECTIONS = COLLECTION_NAMES;
 
 interface DbSchema {
   records: DatabaseRecord[];
@@ -53,7 +54,7 @@ export class DatabaseService {
     return this.dbs.get(collection) ?? null;
   }
 
-  create(collection: CollectionName, data: Record<string, any>): CrudResult<DatabaseRecord> {
+  create(collection: CollectionName, data: Record<string, unknown>): CrudResult<DatabaseRecord> {
     const db = this.getDb(collection);
     if (!db) return { success: false, error: `Invalid collection: ${collection}` };
 
@@ -117,7 +118,7 @@ export class DatabaseService {
   update(
     collection: CollectionName,
     id: string,
-    data: Record<string, any>,
+    data: Record<string, unknown>,
   ): CrudResult<DatabaseRecord> {
     const db = this.getDb(collection);
     if (!db) return { success: false, error: `Invalid collection: ${collection}` };

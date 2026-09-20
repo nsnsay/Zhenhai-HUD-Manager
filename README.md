@@ -129,6 +129,12 @@ Compared with previous versions, Zhen-Hai HUD Manager introduces the following c
 - Enhanced the automatic update mechanism
 - Provided more flexible overlay UI customization options
 
+## Security notes
+
+- The local server (Express + Socket.IO) listens on `127.0.0.1` by default, so other machines on the network cannot reach it.
+- Enabling **Allow LAN access** in Settings switches it to `0.0.0.0`; any device on the same network can then read and write **every collection**, including app settings (LAN access, shortcuts, selected overlay) and the overlay list. Enable it only on a trusted network.
+- Imported third-party overlays run as local web content and **keep full application permissions** (database access, file writes, GSI config install, updater). Only import bundles you trust; removing the overlay window preload is the switch to tighten this later.
+- Zip import only validates the entry count and sizes declared in the zip header, not the real extracted size — avoid untrusted archives.
 ## Acknowledgements
 
 Thanks to the following projects and communities for their support:

@@ -10,6 +10,7 @@ files:
   - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
   - "!resources/overlay/**"
+  - "!resources/gamestate_integration_zhenhai.cfg"
   - "!node_modules/@esbuild/**/*"
   - "!node_modules/@tailwindcss/**/*"
   - "!node_modules/lightningcss-win32-x64-msvc/**/*"
@@ -18,6 +19,12 @@ files:
 extraResources:
   - from: resources/overlay
     to: overlay
+  - from: resources/gamestate_integration_zhenhai.cfg
+    to: gamestate_integration_zhenhai.cfg
+  - from: resources/overlays
+    to: overlays
+  - from: resources/overlay-bundles
+    to: overlay-bundles
 asarUnpack:
   - resources/**
 win:

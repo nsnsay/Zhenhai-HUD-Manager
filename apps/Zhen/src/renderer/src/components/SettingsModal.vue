@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { inject } from "vue";
 import {
   APP_SETTINGS_CONFIG_TYPE,
-  DEFAULT_APP_SETTINGS,
   mergeAppSettings,
   type AppSettings,
   type ExtrasRecord,
   useExtrasStore,
 } from "@renderer/stores/useExtrasStore";
 import { rendererLogger } from "@renderer/utils/logger";
+import UpdateProgressCard from "@renderer/components/UpdateProgressCard.vue";
+import ShortcutInput from "@renderer/components/ShortcutInput.vue";
+import { useUpdaterStore } from "@renderer/stores/useUpdaterStore";
+import { SERVER_HOST_LOCAL, SERVER_PORT } from "../../../shared/server";
+import { resolveLocale } from "@renderer/utils/locale";
+import {
+  DEFAULT_SHORTCUTS,
+  SHORTCUT_ACTIONS,
+  type ShortcutAction,
+  type ShortcutBindings,
+} from "../../../shared/shortcuts";
 
 const props = defineProps<{
   open: boolean;
@@ -17,12 +29,40 @@ const props = defineProps<{
 const emit = defineEmits(["update:open"]);
 const openStartModal = inject<() => void>("openStartModal");
 
+const { t, locale } = useI18n();
 const toast = useToast();
+const languageOptions = computed(() => [
+  { label: t("settings.languageSystem"), value: "system" },
+  { label: "简体中文", value: "zh-CN" },
+  { label: "English", value: "en-US" },
+]);
 const extrasStore = useExtrasStore();
+const updater = useUpdaterStore();
 const isLoading = ref(false);
 const isSaving = ref(false);
-const isCheckingUpdate = ref(false);
 const recordId = ref<string | null>(null);
+const shortcutBindings = ref<ShortcutBindings>({
+  overlayRefresh: DEFAULT_SHORTCUTS.overlayRefresh,
+  overlayToggleMouseEvents: DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
+});
+const shortcutErrors = ref<Partial<Record<ShortcutAction, string>>>({});
+const overlayIgnoreMouseEvents = ref(true);
+const activeBinding = ref(`${SERVER_HOST_LOCAL}:${SERVER_PORT}`);
+
+let unsubscribeIgnoreMouse: (() => void) | null = null;
+
+onMounted(async () => {
+  unsubscribeIgnoreMouse = window.api.onOverlayIgnoreMouseChanged((enabled) => {
+    overlayIgnoreMouseEvents.value = enabled;
+  });
+
+  overlayIgnoreMouseEvents.value = await window.api.overlayGetIgnoreMouseEvents();
+});
+
+onUnmounted(() => {
+  unsubscribeIgnoreMouse?.();
+  unsubscribeIgnoreMouse = null;
+});
 
 const formData = ref<AppSettings>(mergeAppSettings(null));
 const existingSettings = ref<Partial<AppSettings>>({});
@@ -80,9 +120,13 @@ async function loadSettings() {
 
       extrasJson.value = JSON.stringify(formData.value.extras || {}, null, 2);
 
-      parseShortcut(
-        formData.value.overlayRefreshShortcut || DEFAULT_APP_SETTINGS.overlayRefreshShortcut,
-      );
+      shortcutBindings.value = {
+        overlayRefresh: formData.value.overlayRefreshShortcut || DEFAULT_SHORTCUTS.overlayRefresh,
+        overlayToggleMouseEvents:
+          formData.value.overlayMouseToggleShortcut || DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
+      };
+
+      shortcutErrors.value = {};
     } else {
       recordId.value = null;
       existingSettings.value = {};
@@ -91,8 +135,19 @@ async function loadSettings() {
 
       extrasJson.value = JSON.stringify(formData.value.extras || {}, null, 2);
 
-      parseShortcut(DEFAULT_APP_SETTINGS.overlayRefreshShortcut);
+      shortcutBindings.value = { ...DEFAULT_SHORTCUTS };
+
+      shortcutErrors.value = {};
     }
+
+    const network = await window.api.app.applyNetworkSettings(
+      formData.value.allowLanAccess === true,
+    );
+
+    if (network.success && network.data) {
+      activeBinding.value = `${network.data.host}:${network.data.port}`;
+    }
+
     rendererLogger.info("SettingsModal", "Settings loaded", {
       recordId: recordId.value,
     });
@@ -122,8 +177,39 @@ async function saveSettings() {
       return;
     }
 
-    const shortcut = buildShortcut();
-    formData.value.overlayRefreshShortcut = shortcut;
+    const nextBindings: ShortcutBindings = {
+      overlayRefresh:
+        shortcutBindings.value.overlayRefresh?.trim() || DEFAULT_SHORTCUTS.overlayRefresh,
+      overlayToggleMouseEvents:
+        shortcutBindings.value.overlayToggleMouseEvents?.trim() ||
+        DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
+    };
+
+    // 先注册快捷键：不可用时中止保存，避免落库一组实际无效的组合键。
+    const previousBindings = await window.api.shortcut.get();
+    const registration = await window.api.shortcut.register(nextBindings);
+    const failedActions = SHORTCUT_ACTIONS.filter((action) => !registration[action]?.success);
+
+    if (failedActions.length > 0) {
+      shortcutErrors.value = Object.fromEntries(
+        failedActions.map((action) => [action, registration[action]?.error ?? "注册失败"]),
+      ) as Partial<Record<ShortcutAction, string>>;
+
+      await window.api.shortcut.register(previousBindings);
+
+      toast.add({
+        title: t("settings.shortcutUnavailableTitle"),
+        description: t("settings.shortcutUnavailableBody"),
+        color: "error",
+        icon: "i-lucide-alert-triangle",
+      });
+
+      return;
+    }
+
+    shortcutErrors.value = {};
+    formData.value.overlayRefreshShortcut = nextBindings.overlayRefresh ?? "";
+    formData.value.overlayMouseToggleShortcut = nextBindings.overlayToggleMouseEvents ?? "";
 
     const payload: AppSettings = {
       ...existingSettings.value,
@@ -144,14 +230,31 @@ async function saveSettings() {
     }
 
     if (result.success) {
-      await window.api.shortcut.register(shortcut);
+      const network = await window.api.app.applyNetworkSettings(
+        formData.value.allowLanAccess === true,
+      );
+
+      if (network.success && network.data) {
+        activeBinding.value = `${network.data.host}:${network.data.port}`;
+      } else if (!network.success) {
+        toast.add({
+          title: t("settings.networkFailedTitle"),
+          description: network.error ?? t("settings.networkFailedBody"),
+          color: "error",
+          icon: "i-lucide-alert-triangle",
+        });
+      }
+
+      locale.value = resolveLocale(formData.value.language, navigator.language);
+
       rendererLogger.info("SettingsModal", "Settings saved", {
         recordId: recordId.value,
-        shortcut,
+        shortcuts: nextBindings,
+        allowLanAccess: formData.value.allowLanAccess,
       });
       toast.add({
-        title: "Settings Saved",
-        description: "Your preferences have been updated.",
+        title: t("settings.savedTitle"),
+        description: t("settings.savedBody"),
         icon: "i-lucide-check",
       });
       await window.api.setWindowMaterial(formData.value.windowMaterial);
@@ -160,8 +263,8 @@ async function saveSettings() {
     } else {
       rendererLogger.error("SettingsModal", "Settings save failed", result.error);
       toast.add({
-        title: "Save Failed",
-        description: result.error || "Unknown error",
+        title: t("settings.saveFailedTitle"),
+        description: result.error || t("common.unknown"),
         color: "error",
         icon: "i-lucide-x-circle",
       });
@@ -172,74 +275,27 @@ async function saveSettings() {
 }
 
 async function checkForUpdates() {
-  if (isCheckingUpdate.value) return;
-  isCheckingUpdate.value = true;
+  if (updater.isChecking || updater.isDownloading) return;
 
-  try {
-    const result = await window.api.updater.checkForUpdates();
+  const result = await updater.checkForUpdates();
 
-    if (result.success && !result.updateAvailable) {
-      toast.add({
-        title: "Up to Date",
-        description: "No new ZhenHai updates are available.",
-        icon: "i-lucide-check-circle",
-        color: "success",
-      });
-    } else if (!result.success) {
-      toast.add({
-        title: "Update Check Failed",
-        description: result.error || "Unable to reach GitHub releases.",
-        icon: "i-lucide-alert-triangle",
-        color: "error",
-      });
-    }
-  } finally {
-    isCheckingUpdate.value = false;
+  if (result.success && !result.updateAvailable) {
+    toast.add({
+      title: t("settings.upToDateTitle"),
+      description: t("settings.upToDateBody"),
+      icon: "i-lucide-check-circle",
+      color: "success",
+    });
+  } else if (!result.success) {
+    toast.add({
+      title: t("settings.checkFailedTitle"),
+      description: result.error || t("settings.checkFailedBody"),
+      icon: "i-lucide-alert-triangle",
+      color: "error",
+    });
   }
 }
 
-const shortcutMod1 = ref("CommandOrControl");
-const shortcutMod2 = ref("Alt");
-const shortcutKey = ref("I");
-
-const modOptions = [
-  { label: "None", value: "none" },
-  { label: "Ctrl", value: "Ctrl" },
-  { label: "Shift", value: "Shift" },
-  { label: "Alt", value: "Alt" },
-  { label: "Cmd / Ctrl", value: "CommandOrControl" },
-];
-
-const keyOptions = [
-  ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((c) => ({ label: c, value: c })),
-  ..."0123456789".split("").map((c) => ({ label: c, value: c })),
-  ...Array.from({ length: 12 }, (_, i) => ({ label: `F${i + 1}`, value: `F${i + 1}` })),
-];
-
-function parseShortcut(shortcut: string) {
-  const parts = shortcut.split("+");
-  if (parts.length >= 3) {
-    shortcutMod1.value = parts[0];
-    shortcutMod2.value = parts[1];
-    shortcutKey.value = parts[2];
-  } else if (parts.length === 2) {
-    shortcutMod1.value = parts[0];
-    shortcutMod2.value = "none";
-    shortcutKey.value = parts[1];
-  } else if (parts.length === 1) {
-    shortcutMod1.value = "none";
-    shortcutMod2.value = "none";
-    shortcutKey.value = parts[0];
-  }
-}
-
-function buildShortcut(): string {
-  const parts: string[] = [];
-  if (shortcutMod1.value && shortcutMod1.value !== "none") parts.push(shortcutMod1.value);
-  if (shortcutMod2.value && shortcutMod2.value !== "none") parts.push(shortcutMod2.value);
-  if (shortcutKey.value && shortcutKey.value !== "none") parts.push(shortcutKey.value);
-  return parts.join("+");
-}
 
 watch(
   () => props.open,
@@ -253,8 +309,8 @@ watch(
   <UModal
     :open="open"
     @update:open="emit('update:open', $event)"
-    title="Settings"
-    description="Configure overlay and application preferences."
+    :title="t('settings.title')"
+    :description="t('settings.description')"
     :ui="{
       content: 'max-w-3xl rounded-2xl bg-elevated/80',
       header: 'px-6 pt-5 pb-4 border-b border-default/40',
@@ -305,11 +361,49 @@ watch(
           </div>
 
           <div class="settings-panel border border-muted">
-            <div class="settings-panel__label">Overlay Refresh Shortcut</div>
-            <div class="flex flex-wrap items-center gap-2">
-              <USelect v-model="shortcutMod1" :items="modOptions" value-key="value" class="w-36" />
-              <USelect v-model="shortcutMod2" :items="modOptions" value-key="value" class="w-36" />
-              <USelect v-model="shortcutKey" :items="keyOptions" value-key="value" class="w-24" />
+            <div class="settings-panel__label">{{ t("settings.shortcutsTitle") }}</div>
+            <div class="flex flex-col gap-3">
+              <UFormField :label="t('settings.refreshOverlay')" :error="shortcutErrors.overlayRefresh">
+                <ShortcutInput v-model="shortcutBindings.overlayRefresh" />
+              </UFormField>
+
+              <UFormField
+                :label="t('settings.toggleMouseEvents')"
+                :error="shortcutErrors.overlayToggleMouseEvents"
+              >
+                <ShortcutInput v-model="shortcutBindings.overlayToggleMouseEvents" />
+              </UFormField>
+            </div>
+            <p class="mt-2 text-xs text-muted">
+              {{
+                t("settings.mouseEventsState", {
+                  state: overlayIgnoreMouseEvents
+                    ? t("settings.mousePassThrough")
+                    : t("settings.mouseInteractive"),
+                })
+              }}
+            </p>
+          </div>
+
+          <div class="settings-panel border border-muted">
+            <div class="settings-panel__label">{{ t("settings.language") }}</div>
+            <USelect
+              v-model="formData.language"
+              :items="languageOptions"
+              value-key="value"
+              class="mt-3 w-full"
+            />
+            <p class="mt-1 text-xs text-muted">{{ t("settings.languageHint") }}</p>
+          </div>
+
+          <div class="settings-panel border border-muted">
+            <div class="settings-panel__label">{{ t("settings.networkTitle") }}</div>
+            <p class="mt-1 text-xs text-muted">
+              {{ t("settings.networkHint", { binding: activeBinding }) }}
+            </p>
+            <div class="mt-3 flex items-center justify-between gap-3">
+              <span class="text-xs text-muted">{{ t("settings.allowLan") }}</span>
+              <USwitch v-model="formData.allowLanAccess" />
             </div>
           </div>
 
@@ -327,19 +421,46 @@ watch(
           </div>
 
           <div class="settings-panel settings-panel--action">
-            <div>
-              <div class="settings-panel__label">Application Update</div>
-              <p class="text-xs text-muted">Check GitHub releases for a newer version.</p>
+            <div class="w-full">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="settings-panel__label">Application Update</div>
+                  <p class="text-xs text-muted">Check GitHub releases for a newer version.</p>
+                </div>
+
+                <UButton
+                  v-if="updater.isAvailable"
+                  label="Download Update"
+                  icon="i-lucide-download-cloud"
+                  color="primary"
+                  variant="subtle"
+                  size="sm"
+                  @click="void updater.downloadUpdate()"
+                />
+                <UButton
+                  v-else-if="updater.isDownloaded"
+                  label="Restart & Install"
+                  icon="i-lucide-refresh-cw"
+                  color="primary"
+                  variant="subtle"
+                  size="sm"
+                  @click="void updater.installUpdate()"
+                />
+                <UButton
+                  v-else
+                  label="Check for Updates"
+                  icon="i-lucide-refresh-cw"
+                  color="primary"
+                  variant="subtle"
+                  size="sm"
+                  :loading="updater.isChecking"
+                  :disabled="updater.isDownloading"
+                  @click="checkForUpdates"
+                />
+              </div>
+
+              <UpdateProgressCard class="mt-3" />
             </div>
-            <UButton
-              label="Check for Updates"
-              icon="i-lucide-refresh-cw"
-              color="primary"
-              variant="subtle"
-              size="sm"
-              :loading="isCheckingUpdate"
-              @click="checkForUpdates"
-            />
           </div>
         </div>
 

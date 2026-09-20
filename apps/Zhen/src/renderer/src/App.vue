@@ -1,15 +1,21 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
+
 import { onMounted, ref, provide, nextTick, watch } from "vue";
 import { useExtrasStore, type ExtrasRecord } from "./stores/useExtrasStore";
 import { useMatchsStore } from "./stores/useMatchsStore";
 import { usePlayersStore } from "./stores/usePlayersStore";
 import { useTeamsStore } from "./stores/useTeamsStore";
 import { useTournamentsStore } from "./stores/useTournamentsStore";
+import { useOverlaysStore } from "./stores/useOverlaysStore";
 import AppView from "./views/AppView.vue";
 import StartModal from "./components/StartModal.vue";
 import SponsorModal from "./components/SponsorModal.vue";
 import GlobalContextMenu from "@renderer/components/GlobalContextMenu.vue";
 import { rendererLogger } from "@renderer/utils/logger";
+import { resolveLocale } from "@renderer/utils/locale";
+
+const { locale } = useI18n();
 
 const startModalOpen = ref(false);
 const sponsorModalOpen = ref(false);
@@ -34,6 +40,7 @@ onMounted(async () => {
     useMatchsStore().init(),
     useTournamentsStore().init(),
     useExtrasStore().init(),
+    useOverlaysStore().init(),
   ]);
 
   await nextTick();
@@ -46,6 +53,7 @@ onMounted(async () => {
 
   const firstStartFinished = settingsRecord?.settings?.firstStartFinished === true;
   document.body.dataset.windowMaterial = settingsRecord?.settings?.windowMaterial ?? "none";
+  locale.value = resolveLocale(settingsRecord?.settings?.language, navigator.language);
 
   rendererLogger.info("AppBootstrap", "Initial stores loaded", {
     players: usePlayersStore().items.length,

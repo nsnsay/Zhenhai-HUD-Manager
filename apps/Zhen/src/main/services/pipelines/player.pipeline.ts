@@ -2,16 +2,8 @@ import type { DatabaseService } from "../database.service";
 import type { GsiMiddleware } from "../gsi-pipeline.service";
 import type { CSGO, Player, PlayerFormData } from "@zhenhai/csgogsi/types";
 import { logger } from "../logger.service";
-
-const ASSET_BASE = "http://127.0.0.1:1469/assets";
-
-function getAssetUrl(relativePath: string): string {
-  if (!relativePath) return "";
-  if (relativePath.startsWith("http") || relativePath.startsWith("data:")) {
-    return relativePath;
-  }
-  return `${ASSET_BASE}/${relativePath}`;
-}
+import { getAssetUrl } from "../../../shared/assets";
+import { toHudObserverSlot } from "./observer-slot";
 
 const PRIMARY_WEAPON_TYPES = new Set([
   "Rifle",
@@ -117,14 +109,10 @@ function createPlayerEnricher(dbService: DatabaseService): GsiMiddleware {
     };
 
     const adjustObserverSlot = (player: Player) => {
-      const slot = player.observer_slot;
-      if (slot === undefined || slot === null) return;
+      const adjusted = toHudObserverSlot(player.observer_slot);
 
-      if (slot === 10) {
-        player.observer_slot = 0;
-      } else if (slot >= 11) {
-      } else {
-        player.observer_slot = slot + 1;
+      if (adjusted !== undefined) {
+        player.observer_slot = adjusted;
       }
     };
 

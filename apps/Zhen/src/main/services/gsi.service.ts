@@ -162,9 +162,6 @@ export class GsiService extends EventEmitter {
     try {
       const parsed = this.gsi.digest(data);
 
-      if (this.listenerCount("rawData") > 0) {
-        this.emit("rawData", data);
-      }
 
       if (this.listenerCount("gsi:data") === 0) {
         return GsiService.RESOLVED;

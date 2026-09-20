@@ -5,54 +5,74 @@ import icon from "../../resources/icon.ico?asset";
 import { registerElectronIpcService } from "./ipc/electron.ipc";
 import { registerDatabaseIpc } from "./ipc/database.ipc";
 import { DatabaseService } from "./services/database.service";
-import { startExpressServer } from "./services/express.service";
 import { FileService } from "./services/file.service";
 import { registerFileIpc } from "./ipc/file.ipc";
-import { SocketService } from "./services/socket.service";
+import { serverService } from "./services/server.service";
 import { GsiService } from "./services/gsi.service";
 import { GsiPipeline } from "./services/gsi-pipeline.service";
-import { ShortcutService } from "./services/shortcut.service";
+import { shortcutService } from "./services/shortcut.service";
 import { registerShortcutIpc } from "./ipc/shortcut.ipc";
 import createTeamEnricher from "./services/pipelines/team.pipeline";
 import createPlayerEnricher from "./services/pipelines/player.pipeline";
 import createMatchEnricher from "./services/pipelines/match.pipeline";
 import createSettingsEnricher from "./services/pipelines/settings.pipeline";
 import { registerAppIpc } from "./ipc/app.ipc";
+import { registerOverlayIpc, pushOverlayState } from "./ipc/overlay.ipc";
 import { logger } from "./services/logger.service";
 import { registerLoggerIpc } from "./ipc/logger.ipc";
 import { updateService } from "./services/update.service";
 import { registerUpdateIpc } from "./ipc/update.ipc";
+import { overlayService } from "./services/overlay.service";
+import { DEFAULT_SHORTCUTS, type ShortcutBindings } from "../shared/shortcuts";
 import type { WindowMaterial } from "../shared/ipc";
 
 let mainWindow: BrowserWindow | null = null;
-let overlayWindow: BrowserWindow | null = null;
 
-const SERVER_PORT = 1469;
-const OVERLAY_PUBLIC_URL = `http://127.0.0.1:${SERVER_PORT}/overlay/`;
-const OVERLAY_DEV_URL = "http://localhost:1467/overlay/";
+/** 从 extras 集合读到的 app-settings 子集（只取主进程关心的字段）。 */
+interface StoredAppSettings {
+  windowMaterial?: unknown;
+  overlayRefreshShortcut?: string;
+  overlayMouseToggleShortcut?: string;
+  allowLanAccess?: unknown;
+}
 
 function normalizeWindowMaterial(value: unknown): WindowMaterial {
   return value === "acrylic" || value === "mica" ? value : "none";
 }
 
-function applyStoredWindowMaterial(dbService: DatabaseService): void {
-  if (process.platform !== "win32" || !mainWindow || mainWindow.isDestroyed()) return;
+function readAppSettings(dbService: DatabaseService): StoredAppSettings | null {
+  const result = dbService.list("extras", { where: { configType: "app-settings" } });
 
-  const settingsResult = dbService.list("extras", {
-    where: { configType: "app-settings" },
-  });
-  const record = settingsResult.success
-    ? (settingsResult.data?.[0] as { settings?: { windowMaterial?: unknown } } | undefined)
-    : undefined;
-  const material = normalizeWindowMaterial(record?.settings?.windowMaterial);
+  if (!result.success || !result.data || result.data.length === 0) {
+    return null;
+  }
 
+  const record = result.data[0] as { settings?: StoredAppSettings };
+  return record.settings ?? null;
+}
+
+function resolveShortcutBindings(settings: StoredAppSettings | null): ShortcutBindings {
+  return {
+    overlayRefresh: settings?.overlayRefreshShortcut?.trim() || DEFAULT_SHORTCUTS.overlayRefresh,
+    overlayToggleMouseEvents:
+      settings?.overlayMouseToggleShortcut?.trim() || DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
+  };
+}
+
+function applyStoredWindowMaterial(settings: StoredAppSettings | null): void {
+  if (process.platform !== "win32" || !mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  const material = normalizeWindowMaterial(settings?.windowMaterial);
   mainWindow.setBackgroundMaterial(material);
   logger.info("MainWindow", `Startup background material: ${material}`);
 }
 
 function createMainWindow(): void {
-  let minWidth = 1280;
-  let minHeight = 750;
+  const minWidth = 1280;
+  const minHeight = 750;
+
   mainWindow = new BrowserWindow({
     width: minWidth,
     height: minHeight,
@@ -90,51 +110,7 @@ function createMainWindow(): void {
   }
 }
 
-function createOverlayWindow(): void {
-  overlayWindow = new BrowserWindow({
-    fullscreen: true,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    focusable: true,
-    frame: false,
-    title: "Zhenhai Overlay",
-    icon: icon,
-    skipTaskbar: true,
-    type: "toolbar",
-    webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: false,
-      devTools: true,
-    },
-  });
-
-  overlayWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
-    return { action: "deny" };
-  });
-
-  overlayWindow.on("closed", () => {
-    overlayWindow = null;
-    logger.info("OverlayWindow", "Overlay window destroyed, reference cleared");
-  });
-
-  logger.info("OverlayWindow", "Overlay window created");
-
-  overlayWindow.setAlwaysOnTop(true, "screen-saver", 1);
-  overlayWindow.setFullScreen(true);
-  overlayWindow.setIgnoreMouseEvents(true);
-
-  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-    overlayWindow.loadURL(OVERLAY_DEV_URL);
-  } else {
-    overlayWindow.loadURL(OVERLAY_PUBLIC_URL);
-  }
-}
-
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId("com.electron");
 
   logger.initialize();
@@ -148,7 +124,8 @@ app.whenReady().then(() => {
   const dbService = DatabaseService.getInstance();
   const fileService = FileService.getInstance();
   const gsiService = GsiService.getInstance();
-  applyStoredWindowMaterial(dbService);
+  const settings = readAppSettings(dbService);
+  applyStoredWindowMaterial(settings);
 
   const gsiPipeline = new GsiPipeline();
   gsiPipeline.use(createPlayerEnricher(dbService));
@@ -157,49 +134,49 @@ app.whenReady().then(() => {
   gsiPipeline.use(createSettingsEnricher(dbService));
   gsiService.setPipeline(gsiPipeline);
 
-  registerElectronIpcService({
-    getMain: () => mainWindow,
-    getOverlay: () => overlayWindow,
-    createOverlay: () => {
-      createOverlayWindow();
-      return overlayWindow;
+  overlayService.init({
+    onLifecycle: (state) => {
+      mainWindow?.webContents.send("overlay:lifecycle", state);
+      pushOverlayState();
+    },
+    onIgnoreMouseChanged: (enabled) => {
+      mainWindow?.webContents.send("overlay:ignore-mouse-changed", enabled);
+      pushOverlayState();
     },
   });
 
+  registerElectronIpcService({ getMain: () => mainWindow });
   registerDatabaseIpc(dbService);
   registerFileIpc(fileService);
   registerShortcutIpc();
   registerAppIpc();
+  registerOverlayIpc({ dbService, getMainWindow: () => mainWindow });
 
-  const server = startExpressServer(dbService, fileService);
-  const socketService = SocketService.init(server);
-  socketService.bindGsi(gsiService);
+  serverService.init(dbService, fileService, gsiService);
 
-  const shortcutService = ShortcutService.getInstance();
-  shortcutService.setSocketService(socketService);
-
-  let shortcut = "CommandOrControl+Alt+I";
-  const settingsResult = dbService.list("extras", { where: { configType: "app-settings" } });
-  if (settingsResult.success && settingsResult.data && settingsResult.data.length > 0) {
-    const settings = (settingsResult.data[0] as { settings?: { overlayRefreshShortcut?: string } })
-      .settings;
-    if (settings?.overlayRefreshShortcut) {
-      shortcut = settings.overlayRefreshShortcut;
-    }
-  }
-  shortcutService.register(shortcut);
-
-  server.listen(SERVER_PORT, "0.0.0.0", () => {
-    logger.info("HttpServer", `Express + Socket.IO running at http://0.0.0.0:${SERVER_PORT}`);
+  shortcutService.setHandler("overlayRefresh", () => {
+    serverService.getSocketService()?.broadcast("overlay:refresh", { timestamp: Date.now() });
   });
+  shortcutService.setHandler("overlayToggleMouseEvents", () => {
+    overlayService.toggleIgnoreMouseEvents();
+  });
+  shortcutService.register(resolveShortcutBindings(settings));
+
+  const networkResult = await serverService.applyLanAccess(settings?.allowLanAccess === true);
+
+  if (!networkResult.success) {
+    logger.error("HttpServer", "Failed to start local server", networkResult.error);
+  }
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow();
+    }
   });
 });
 
 app.on("will-quit", () => {
-  ShortcutService.getInstance().unregisterAll();
+  shortcutService.unregisterAll();
 });
 
 app.on("window-all-closed", () => {

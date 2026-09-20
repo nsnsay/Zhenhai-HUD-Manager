@@ -101,6 +101,9 @@ export type ComponentMode = false | "mode1" | "mode2";
 
 export type WindowMaterial = "none" | "acrylic" | "mica";
 
+/** 管理端界面语言偏好；system 表示跟随操作系统。 */
+export type LanguagePreference = "system" | "zh-CN" | "en-US";
+
 export interface SettingFormData {
   ctDefaultColor: string;
   tDefaultColor: string;
@@ -114,10 +117,14 @@ export interface SettingFormData {
   overlayKillfeedMode: ComponentMode;
   overlayBorderRadius: number;
   overlayRefreshShortcut: string;
+  overlayMouseToggleShortcut: string;
   overlaySafeZoneX: number;
   overlaySafeZoneY: number;
   extras: Record<string, unknown>;
   windowMaterial: WindowMaterial;
   cs2Path: string;
+  allowLanAccess: boolean;
   firstStartFinished: boolean;
+  language: LanguagePreference;
+  selectedOverlayId: string;
 }

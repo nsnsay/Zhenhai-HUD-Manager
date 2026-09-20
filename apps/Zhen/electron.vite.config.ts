@@ -1,11 +1,11 @@
 import { resolve } from "path";
 import { defineConfig } from "electron-vite";
+import type { PluginOption } from "vite";
 import vue from "@vitejs/plugin-vue";
 import devtools from "vite-plugin-vue-devtools";
 import tailwindcss from "@tailwindcss/vite";
 import ui from "@nuxt/ui/vite";
 
-console.log(__dirname);
 
 export default defineConfig({
   main: {
@@ -32,9 +32,12 @@ export default defineConfig({
       },
       dedupe: ["vue", "vue-router", "pinia"],
     },
+    // @tailwindcss/vite 与 vite-plugin-vue-devtools 的类型来自各自携带的 vite 8，
+    // 而 electron-vite 使用 vite 7；两套 PluginOption 定义不兼容，因此在数组层面统一做类型适配
+    // （运行时仍是同一批插件实例）。
     plugins: [
       vue(),
-      devtools() as any,
+      devtools(),
       tailwindcss(),
       ui({
         root: resolve("./"),
@@ -83,6 +86,6 @@ export default defineConfig({
           },
         },
       }),
-    ],
+    ] as unknown as PluginOption[],
   },
 });

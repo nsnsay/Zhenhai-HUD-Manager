@@ -1,9 +1,2 @@
-const ASSET_BASE = "http://127.0.0.1:1469/assets";
-
-export function getAssetUrl(relativePath: string): string {
-  if (!relativePath) return "";
-  if (relativePath.startsWith("http") || relativePath.startsWith("data:")) {
-    return relativePath;
-  }
-  return `${ASSET_BASE}/${relativePath}`;
-}
+// 资源 URL 的唯一实现在 src/shared/assets.ts，这里只是 renderer 侧的引用入口。
+export { getAssetUrl } from "../../../shared/assets";

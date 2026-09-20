@@ -1,30 +1,60 @@
 <script setup lang="ts">
-const localResources = [
+import { useI18n } from "vue-i18n";
+
+import { computed } from "vue";
+import {
+  apiBaseUrl,
+  assetsBaseUrl,
+  gsiEndpoint,
+  overlayUrl,
+  serverOrigin,
+} from "../../../../shared/server";
+import { resolveOverlayUrl } from "../../../../shared/overlays";
+import { useOverlaysStore } from "@renderer/stores/useOverlaysStore";
+
+const { t } = useI18n();
+const overlays = useOverlaysStore();
+
+
+/** 当前选中 Overlay 的实际地址（未加载到条目时回退到默认内置地址）。 */
+const currentOverlayUrl = computed(() => {
+  const entry = overlays.selectedEntry;
+
+  return entry ? resolveOverlayUrl(entry, serverOrigin()) : overlayUrl();
+});
+
+const localResources = computed(() => [
   {
-    label: "GSI Endpoint",
-    value: "http://127.0.0.1:1469/gsi",
+    label: t("toolbox.commands.gsiLabel"),
+    value: gsiEndpoint(),
     icon: "i-lucide-webhook",
-    description: "CS2 posts Game State Integration payloads here.",
+    description: t("toolbox.commands.gsiDescription"),
   },
   {
-    label: "Overlay",
-    value: "http://127.0.0.1:1469/overlay/",
+    label: t("toolbox.commands.currentOverlayLabel"),
+    value: currentOverlayUrl.value,
+    icon: "i-lucide-layers",
+    description: t("toolbox.commands.currentOverlayDescription"),
+  },
+  {
+    label: t("toolbox.commands.overlayLabel"),
+    value: overlayUrl(),
     icon: "i-lucide-presentation",
-    description: "Hosted HUD page used by the transparent overlay window.",
+    description: t("toolbox.commands.overlayDescription"),
   },
   {
-    label: "REST API",
-    value: "http://127.0.0.1:1469/api",
+    label: t("toolbox.commands.apiLabel"),
+    value: apiBaseUrl(),
     icon: "i-lucide-server",
-    description: "Read database collections from local HTTP clients.",
+    description: t("toolbox.commands.apiDescription"),
   },
   {
-    label: "Assets",
-    value: "http://127.0.0.1:1469/assets",
+    label: t("toolbox.commands.assetsLabel"),
+    value: assetsBaseUrl(),
     icon: "i-lucide-image",
-    description: "User uploaded logos and avatars are served from here.",
+    description: t("toolbox.commands.assetsDescription"),
   },
-] as const;
+]);
 
 const usefulLinks = [
   {
@@ -51,16 +81,16 @@ const usefulLinks = [
 <template>
   <div class="flex h-full min-h-0 flex-col gap-5">
     <div>
-      <h2 class="text-lg font-semibold leading-6">Commands & Links</h2>
+      <h2 class="text-lg font-semibold leading-6">{{ t("toolbox.commands.title") }}</h2>
       <p class="mt-1 text-sm text-muted">
-        Local endpoints and useful references for ZhenHai development.
+        {{ t("toolbox.commands.subtitle") }}
       </p>
     </div>
 
     <section class="flex flex-col gap-3">
       <div class="flex items-center gap-2">
         <UIcon name="i-lucide-cable" class="h-4 w-4 text-primary" />
-        <h3 class="text-sm font-semibold">Local endpoints</h3>
+        <h3 class="text-sm font-semibold">{{ t("toolbox.commands.localEndpoints") }}</h3>
       </div>
 
       <div class="grid gap-3 md:grid-cols-2">
@@ -91,7 +121,7 @@ const usefulLinks = [
     <section class="flex flex-col gap-3">
       <div class="flex items-center gap-2">
         <UIcon name="i-lucide-link" class="h-4 w-4 text-primary" />
-        <h3 class="text-sm font-semibold">Useful links</h3>
+        <h3 class="text-sm font-semibold">{{ t("toolbox.commands.usefulLinks") }}</h3>
       </div>
 
       <div class="grid gap-3 md:grid-cols-3">
@@ -108,7 +138,7 @@ const usefulLinks = [
             <div class="mt-3 text-sm font-semibold">{{ link.label }}</div>
             <p class="mt-2 flex-1 text-xs leading-5 text-muted">{{ link.description }}</p>
             <UButton
-              label="Open"
+              :label="t('toolbox.commands.open')"
               icon="i-lucide-external-link"
               color="neutral"
               variant="ghost"

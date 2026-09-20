@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useI18n } from "vue-i18n";
+
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useColorMode } from "@vueuse/core";
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
 import { usePlayersStore } from "@renderer/stores/usePlayersStore";
@@ -11,8 +13,12 @@ import TournamentModal from "@renderer/components/TournamentModal.vue";
 import { useGsiStore } from "@zhenhai/csgogsi/gsi-vue";
 import SettingsModal from "@renderer/components/SettingsModal.vue";
 import { rendererLogger } from "@renderer/utils/logger";
-import type { NativeThemeSource, UpdaterEventPayload } from "../../../shared/ipc";
+import { useUpdaterStore } from "@renderer/stores/useUpdaterStore";
+import { useOverlaysStore } from "@renderer/stores/useOverlaysStore";
+import UpdateProgressCard from "@renderer/components/UpdateProgressCard.vue";
+import type { NativeThemeSource } from "../../../shared/ipc";
 
+const { t } = useI18n();
 const currentTournament = useCurrentTournament();
 const gsi = useGsiStore();
 const toast = useToast();
@@ -36,9 +42,9 @@ onUnmounted(() => {
   gsi.disconnect();
 });
 
-const overlayState = ref<string>("closed");
+const overlays = useOverlaysStore();
 
-let unsubscribeUpdater: (() => void) | null = null;
+const updater = useUpdaterStore();
 let updatePromptId: string | number | null = null;
 
 function dismissUpdatePrompt(): void {
@@ -48,57 +54,74 @@ function dismissUpdatePrompt(): void {
   }
 }
 
-function handleUpdaterEvent(event: UpdaterEventPayload): void {
-  if (event.type === "available") {
-    dismissUpdatePrompt();
-    const toastItem = toast.add({
-      title: "Update Available",
-      description: `Version ${event.version ?? "latest"} is ready to download.`,
-      icon: "i-lucide-download-cloud",
-      color: "primary",
-      duration: 0,
-      actions: [
-        {
-          label: "Download",
-          color: "primary",
-          onClick: () => {
-            dismissUpdatePrompt();
-            void window.api.updater.downloadUpdate();
-          },
-        },
-        {
-          label: "Later",
-          color: "neutral",
-          variant: "outline",
-          onClick: dismissUpdatePrompt,
-        },
-      ],
-    });
-    updatePromptId = toastItem.id;
-  }
+/**
+ * 更新状态由 useUpdaterStore 统一维护（IPC 只订阅一次），
+ * 这里只负责把状态变化映射成常驻提示；下载进度由 UpdateProgressCard 展示。
+ */
+watch(
+  () => updater.status,
+  (status) => {
+    if (status === "available") {
+      dismissUpdatePrompt();
 
-  if (event.type === "downloaded") {
-    dismissUpdatePrompt();
-    const toastItem = toast.add({
-      title: "Update Ready",
-      description: `Version ${event.version ?? "latest"} has been downloaded.`,
-      icon: "i-lucide-refresh-cw",
-      color: "success",
-      duration: 0,
-      actions: [
-        {
-          label: "Restart & Install",
-          color: "primary",
-          onClick: () => {
-            dismissUpdatePrompt();
-            void window.api.updater.installUpdate();
+      const toastItem = toast.add({
+        title: "Update Available",
+        description: `Version ${updater.version ?? "latest"} is ready to download.`,
+        icon: "i-lucide-download-cloud",
+        color: "primary",
+        duration: 0,
+        actions: [
+          {
+            label: "Download",
+            color: "primary",
+            onClick: () => {
+              dismissUpdatePrompt();
+              void updater.downloadUpdate();
+            },
           },
-        },
-      ],
-    });
-    updatePromptId = toastItem.id;
-  }
-}
+          {
+            label: "Later",
+            color: "neutral",
+            variant: "outline",
+            onClick: dismissUpdatePrompt,
+          },
+        ],
+      });
+
+      updatePromptId = toastItem.id;
+      return;
+    }
+
+    if (status === "downloading") {
+      dismissUpdatePrompt();
+      return;
+    }
+
+    if (status === "downloaded") {
+      dismissUpdatePrompt();
+
+      const toastItem = toast.add({
+        title: "Update Ready",
+        description: `Version ${updater.version ?? "latest"} has been downloaded.`,
+        icon: "i-lucide-refresh-cw",
+        color: "success",
+        duration: 0,
+        actions: [
+          {
+            label: "Restart & Install",
+            color: "primary",
+            onClick: () => {
+              dismissUpdatePrompt();
+              void updater.installUpdate();
+            },
+          },
+        ],
+      });
+
+      updatePromptId = toastItem.id;
+    }
+  },
+);
 
 async function handleMinimize() {
   await window.api.windowMinimize();
@@ -110,43 +133,37 @@ async function handleClose() {
   await window.api.windowClose();
 }
 
-let unsubscribe: (() => void) | null = null;
-
 onMounted(() => {
-  unsubscribe = window.api.onOverlayLifecycle((state) => {
-    overlayState.value = state;
-  });
-  unsubscribeUpdater = window.api.updater.onEvent(handleUpdaterEvent);
+  updater.init();
 });
 
 onUnmounted(() => {
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-  if (unsubscribeUpdater) {
-    unsubscribeUpdater();
-    unsubscribeUpdater = null;
-  }
+  updater.dispose();
 });
 
+/**
+ * 侧边栏 Overlay 按钮：状态直接取应用级 store 的 isOpen。
+ *
+ * store 在 App.vue 启动时已 refresh 过真实状态，之后创建/显示/隐藏/关闭都由主进程推送，
+ * 因此按钮与 Overlay 窗口始终一致（不再依赖「只收到事件才更新」的本地 ref）。
+ */
 async function handleToggleOverlay() {
-  if (overlayState.value === "shown") {
+  if (overlays.isOpen) {
     await window.api.overlayClose();
     rendererLogger.info("AppView", "Overlay close requested");
     toast.add({
-      title: "Overlay Status",
-      description: "Closing Overlay...",
+      title: t("app.overlayStatusTitle"),
+      description: t("app.overlayClosing"),
       icon: "i-lucide-send-to-back",
       duration: 1500,
       color: "neutral",
     });
   } else {
-    await window.api.overlayCreate();
+    await overlays.openOverlay();
     rendererLogger.info("AppView", "Overlay create requested");
     toast.add({
-      title: "Overlay Status",
-      description: "Opening Overlay...",
+      title: t("app.overlayStatusTitle"),
+      description: t("app.overlayOpening"),
       icon: "i-lucide-send-to-back",
       duration: 1500,
     });
@@ -159,7 +176,7 @@ const selectedTeam = computed(() => {
   const item = currentTournament.tournamentItems.find(
     (t) => t.value === currentTournament.currentId,
   );
-  return item ?? { label: "No Tournament", value: "" };
+  return item ?? { label: t("app.noTournament"), value: "" };
 });
 
 const teamsItems = computed<DropdownMenuItem[][]>(() => [
@@ -169,7 +186,7 @@ const teamsItems = computed<DropdownMenuItem[][]>(() => [
     icon: item.avatar ? undefined : "i-lucide-trophy",
     children: [
       {
-        label: "Select",
+        label: t("app.select"),
         icon: "i-lucide-check",
         kbds: ["meta", String(index + 1)],
         onSelect() {
@@ -177,14 +194,14 @@ const teamsItems = computed<DropdownMenuItem[][]>(() => [
         },
       },
       {
-        label: "Edit",
+        label: t("common.edit"),
         icon: "i-lucide-pencil",
         onSelect() {
           handleEditTournament(item.value);
         },
       },
       {
-        label: "Delete",
+        label: t("common.delete"),
         icon: "i-lucide-trash-2",
         class: "text-error",
         onSelect() {
@@ -195,7 +212,7 @@ const teamsItems = computed<DropdownMenuItem[][]>(() => [
   })),
   [
     {
-      label: "Create tournament",
+      label: t("app.createTournament"),
       icon: "i-lucide-circle-plus",
       onSelect() {
         openCreateTournament();
@@ -213,34 +230,40 @@ const menuItems = computed<NavigationMenuItem[]>(() => {
 
   const items: NavigationMenuItem[] = [
     {
-      label: "Database",
+      label: t("nav.database"),
       icon: "i-lucide-database",
       defaultOpen: true,
       path: "/",
       to: "/",
       children: isExpanded
         ? [
-            { label: "Matchs", icon: "i-lucide-trophy", to: "/matchs" },
-            { label: "Teams", icon: "i-lucide-users", to: "/teams" },
-            { label: "Players", icon: "i-lucide-circle-user-round", to: "/players" },
+            { label: t("nav.matchs"), icon: "i-lucide-trophy", to: "/matchs" },
+            { label: t("nav.teams"), icon: "i-lucide-users", to: "/teams" },
+            { label: t("nav.players"), icon: "i-lucide-circle-user-round", to: "/players" },
           ]
         : undefined,
     },
     {
-      label: "Toolbox",
+      label: t("nav.overlays"),
+      icon: "i-lucide-layers",
+      path: "/overlays",
+      to: "/overlays",
+    },
+    {
+      label: t("nav.toolbox"),
       icon: "i-lucide-square-dot",
       defaultOpen: true,
       path: "/toolbox",
       to: "/toolbox",
       children: isExpanded
         ? [
-            { label: "GSI Data", icon: "i-lucide-binary", to: "/toolbox/gsi" },
+            { label: t("nav.gsi"), icon: "i-lucide-binary", to: "/toolbox/gsi" },
             {
-              label: "Commands & Links",
+              label: t("nav.commandsLinks"),
               icon: "i-lucide-link-2",
               to: "/toolbox/commands-links",
             },
-            { label: "Logs", icon: "i-lucide-scroll-text", to: "/toolbox/logs" },
+            { label: t("nav.logs"), icon: "i-lucide-scroll-text", to: "/toolbox/logs" },
           ]
         : undefined,
     },
@@ -463,7 +486,7 @@ async function confirmDeleteTournament() {
           :class="[
             {
               'bg-linear-to-r from-sky-300 to-sky-700 transition duration-800':
-                overlayState === 'shown',
+                overlays.isOpen,
             },
           ]"
           icon="i-lucide-send-to-back"
@@ -568,6 +591,8 @@ async function confirmDeleteTournament() {
       <UButton label="Delete" color="error" @click="confirmDeleteTournament" />
     </template>
   </UModal>
+
+  <UpdateProgressCard floating />
 </template>
 
 <style scoped>

@@ -2,6 +2,8 @@
 import { ref, computed } from "vue";
 import PlayerModal from "./components/PlayerModal.vue";
 import { usePlayersStore, type PlayerRecord } from "@renderer/stores/usePlayersStore";
+import { useTeamsStore } from "@renderer/stores/useTeamsStore";
+import { planPlayerDetach } from "@renderer/utils/references";
 import { useContextMenuStore } from "@renderer/stores/context-menu.store";
 import { useCurrentTournament } from "@renderer/stores/useCurrentTournament";
 import { getAssetUrl } from "@renderer/utils/assets-url";
@@ -10,6 +12,7 @@ import type { TableColumn } from "@nuxt/ui";
 import { rendererLogger } from "@renderer/utils/logger";
 
 const playersStore = usePlayersStore();
+const teamsStore = useTeamsStore();
 const currentTournament = useCurrentTournament();
 const contextMenuStore = useContextMenuStore();
 const toast = useToast();
@@ -88,6 +91,27 @@ function requestDelete(player: PlayerRecord) {
 async function confirmDelete() {
   if (!deleteTarget.value) return;
   const player = deleteTarget.value;
+
+  const patches = planPlayerDetach(player.id, teamsStore.items);
+
+  for (const patch of patches) {
+    const cleanup = await teamsStore.update(patch.id, { playerIds: patch.playerIds });
+
+    if (!cleanup.success) {
+      rendererLogger.error("DatabasePlayerView", "Player reference cleanup failed", {
+        teamId: patch.id,
+        error: cleanup.error,
+      });
+      toast.add({
+        title: "Delete Failed",
+        description: cleanup.error ?? "Unable to detach the player from its team.",
+        icon: "i-lucide-x-circle",
+        color: "error",
+      });
+      deleteTarget.value = null;
+      return;
+    }
+  }
 
   const result = await playersStore.remove(player.id);
   if (result.success) {

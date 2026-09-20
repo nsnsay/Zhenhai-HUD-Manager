@@ -3,6 +3,7 @@ import { ref, toRaw, type Ref } from "vue";
 import type { BaseRecord } from "../types/database-store.types";
 import type { CollectionName, QueryOptions, CrudResult } from "../types/api.types";
 import { rendererLogger } from "../utils/logger";
+import { errorMessage } from "../../../shared/errors";
 
 function toPlainRecord<T>(value: T): Record<string, unknown> {
   return JSON.parse(JSON.stringify(toRaw(value))) as Record<string, unknown>;
@@ -64,9 +65,9 @@ export function createDatabaseStore<T extends BaseRecord = BaseRecord>(
           error.value = result.error ?? "Failed to fetch list";
           rendererLogger.warn("DatabaseStore", `Fetch ${collectionName} failed`, result.error);
         }
-      } catch (e: any) {
-        error.value = e?.message ?? "IPC call failed";
-        rendererLogger.error("DatabaseStore", `Fetch ${collectionName} IPC failed`, e);
+      } catch (cause) {
+        error.value = errorMessage(cause);
+        rendererLogger.error("DatabaseStore", `Fetch ${collectionName} IPC failed`, cause);
       } finally {
         isLoading.value = false;
       }
@@ -86,10 +87,10 @@ export function createDatabaseStore<T extends BaseRecord = BaseRecord>(
           rendererLogger.warn("DatabaseStore", `Create ${collectionName} failed`, result.error);
         }
         return result as CrudResult<T>;
-      } catch (e: any) {
-        const msg: string = e?.message ?? "IPC call failed";
+      } catch (cause) {
+        const msg = errorMessage(cause);
         error.value = msg;
-        rendererLogger.error("DatabaseStore", `Create ${collectionName} IPC failed`, e);
+        rendererLogger.error("DatabaseStore", `Create ${collectionName} IPC failed`, cause);
         return { success: false, error: msg };
       }
     }
@@ -115,10 +116,10 @@ export function createDatabaseStore<T extends BaseRecord = BaseRecord>(
           });
         }
         return result as CrudResult<T>;
-      } catch (e: any) {
-        const msg: string = e?.message ?? "IPC call failed";
+      } catch (cause) {
+        const msg = errorMessage(cause);
         error.value = msg;
-        rendererLogger.error("DatabaseStore", `Update ${collectionName} IPC failed`, e);
+        rendererLogger.error("DatabaseStore", `Update ${collectionName} IPC failed`, cause);
         return { success: false, error: msg };
       }
     }
@@ -138,10 +139,10 @@ export function createDatabaseStore<T extends BaseRecord = BaseRecord>(
           });
         }
         return result as CrudResult<{ id: string }>;
-      } catch (e: any) {
-        const msg: string = e?.message ?? "IPC call failed";
+      } catch (cause) {
+        const msg = errorMessage(cause);
         error.value = msg;
-        rendererLogger.error("DatabaseStore", `Remove ${collectionName} IPC failed`, e);
+        rendererLogger.error("DatabaseStore", `Remove ${collectionName} IPC failed`, cause);
         return { success: false, error: msg };
       }
     }

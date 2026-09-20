@@ -4,6 +4,7 @@ import { createDatabaseStore } from "./database.factory";
 import type { BaseRecord } from "../types/database-store.types";
 import type { SettingFormData } from "@zhenhai/csgogsi/types";
 import type { QueryOptions } from "../../../shared/ipc";
+import { DEFAULT_SHORTCUTS } from "../../../shared/shortcuts";
 import { rendererLogger } from "../utils/logger";
 
 export interface AppSettings extends SettingFormData {
@@ -30,13 +31,17 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   overlayRadarMode: "mode1",
   overlayKillfeedMode: "mode1",
   overlayBorderRadius: 8,
-  overlayRefreshShortcut: "CommandOrControl+Alt+I",
+  overlayRefreshShortcut: DEFAULT_SHORTCUTS.overlayRefresh,
+  overlayMouseToggleShortcut: DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
   overlaySafeZoneX: 16,
   overlaySafeZoneY: 16,
   extras: {},
   windowMaterial: "none",
   firstStartFinished: false,
   cs2Path: "",
+  allowLanAccess: false,
+  language: "system",
+  selectedOverlayId: "default",
 };
 
 function toRecord(value: unknown): Record<string, unknown> {

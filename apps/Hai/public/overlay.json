@@ -1,0 +1,10 @@
+{
+  "manifestVersion": 1,
+  "name": "ZhenHai Default Overlay",
+  "description": "Built-in broadcast HUD: player sidebars, focused player, radar, match bar and veto feed. Its visual settings are managed from the app Settings panel.",
+  "author": "nsnsay",
+  "homepage": "https://github.com/nsnsay/Zhenhai-HUD-Manager",
+  "settings": {},
+  "override": {},
+  "shortcuts": []
+}

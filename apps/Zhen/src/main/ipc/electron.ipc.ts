@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow, app, nativeTheme } from "electron";
 import { logger } from "../services/logger.service";
+import { overlayService } from "../services/overlay.service";
 import type { NativeThemeSource, WindowMaterial } from "../../shared/ipc";
 
 const WINDOW_MATERIALS = new Set<WindowMaterial>(["none", "acrylic", "mica"]);
@@ -14,8 +15,6 @@ function normalizeThemeSource(value: unknown): NativeThemeSource {
 
 interface WindowRefs {
   getMain: () => BrowserWindow | null;
-  getOverlay: () => BrowserWindow | null;
-  createOverlay: () => BrowserWindow | null;
 }
 
 export function registerElectronIpcService(refs: WindowRefs): void {
@@ -65,66 +64,15 @@ export function registerElectronIpcService(refs: WindowRefs): void {
     return true;
   });
 
-  ipcMain.handle("overlay:create", () => {
-    logger.info("OverlayWindow", "IPC overlay:create");
-    let win = refs.getOverlay();
-    if (!win || win.isDestroyed()) {
-      win = refs.createOverlay();
-      if (win) {
-        bindOverlayLifecycle(refs);
-      }
-    }
-    if (win && !win.isDestroyed()) {
-      win.show();
-      return true;
-    }
-    return false;
-  });
+  // Overlay 相关操作统一委托给 OverlayService（窗口生命周期与鼠标穿透状态都在那里）。
+  ipcMain.handle("overlay:create", () => overlayService.open() !== null);
 
   ipcMain.handle("overlay:close", () => {
-    logger.info("OverlayWindow", "IPC overlay:close");
-    const win = refs.getOverlay();
-    if (win && !win.isDestroyed()) {
-      win.close();
-    }
+    overlayService.close();
     return true;
   });
 
-  ipcMain.handle("overlay:toggle-devtools", () => {
-    const win = refs.getOverlay();
-    if (!win || win.isDestroyed()) return false;
-    if (win.webContents.isDevToolsOpened()) {
-      win.webContents.closeDevTools();
-    } else {
-      win.webContents.openDevTools({ mode: "detach" });
-    }
-    return true;
-  });
+  ipcMain.handle("overlay:toggle-devtools", () => overlayService.toggleDevTools());
 
-  ipcMain.handle("overlay:watch-status", (_e, enabled: boolean) => {
-    const win = refs.getOverlay();
-    if (!win || win.isDestroyed()) return false;
-    win.webContents.send("overlay:status-update", { active: enabled });
-    return true;
-  });
-}
-
-function bindOverlayLifecycle(refs: WindowRefs): void {
-  const win = refs.getOverlay();
-  if (!win || win.isDestroyed()) return;
-  if ((win as any).__lifecycleBound) return;
-  (win as any).__lifecycleBound = true;
-
-  const notifyMain = (event: string, data?: unknown) => {
-    logger.info("OverlayWindow", `Overlay lifecycle event: ${event}`, data);
-    const main = refs.getMain();
-    if (main && !main.isDestroyed()) {
-      main.webContents.send(event, data);
-    }
-  };
-
-  win.on("show", () => notifyMain("overlay:lifecycle", "shown"));
-  win.on("hide", () => notifyMain("overlay:lifecycle", "hidden"));
-  win.on("close", () => notifyMain("overlay:lifecycle", "closing"));
-  win.on("closed", () => notifyMain("overlay:lifecycle", "closed"));
+  ipcMain.handle("overlay:get-ignore-mouse-events", () => overlayService.isIgnoreMouseEvents());
 }

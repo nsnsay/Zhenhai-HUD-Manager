@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Team, Player, Bomb } from '@zhenhai/csgogsi/types'
+import type { Team, Player, Bomb, RoundEndEvent } from '@zhenhai/csgogsi/types'
 import { useHaiSettings } from '@/utils/useHaiSettings'
 import TeamAvatar from '@/views/components/TeamAvatar.vue'
 import { useGsiStore, useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
@@ -11,7 +11,7 @@ const props = defineProps<{
 
 const { teamAttrs } = useHaiSettings()
 const gsi = useGsiStore()
-const roundEndObject = ref()
+const roundEndObject = ref<RoundEndEvent | undefined>()
 
 const MAX_TIMER = {
   planting: 3,
@@ -481,10 +481,10 @@ watch(
   { immediate: true },
 )
 
-useGsiEvent('defuseStart', (player) => {
+useGsiEvent('defuseStart', (player?: Player) => {
   isDefuseActive = true
 
-  if (props.team.side === 'CT') {
+  if (props.team.side === 'CT' && player) {
     startCtCountdown(player)
   }
 })
@@ -549,7 +549,6 @@ useGsiEvent('bombExplode', () => {
 
 useGsiEvent('roundEnd', (score) => {
   roundEndObject.value = score
-  console.log(score)
 })
 
 const showRoundWinner = computed(() => {

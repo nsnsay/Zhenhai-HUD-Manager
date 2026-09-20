@@ -2,14 +2,7 @@ import type { Team, TeamFormData, TeamInfo } from "@zhenhai/csgogsi/types";
 import type { DatabaseService } from "../database.service";
 import type { GsiMiddleware } from "../gsi-pipeline.service";
 import type { CSGO } from "@zhenhai/csgogsi";
-
-const ASSET_BASE = "http://127.0.0.1:1469/assets";
-
-function getAssetUrl(relativePath: string): string {
-  if (!relativePath) return "";
-  if (relativePath.startsWith("http") || relativePath.startsWith("data:")) return relativePath;
-  return `${ASSET_BASE}/${relativePath}`;
-}
+import { getAssetUrl } from "../../../shared/assets";
 
 interface DbPlayer {
   id?: string;

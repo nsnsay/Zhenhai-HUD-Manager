@@ -6,6 +6,8 @@ import { useCurrentTournament } from "@renderer/stores/useCurrentTournament";
 import { getAssetUrl } from "@renderer/utils/assets-url";
 import { storeToRefs } from "pinia";
 import { usePlayersStore } from "@renderer/stores/usePlayersStore.js";
+import { useMatchsStore } from "@renderer/stores/useMatchsStore";
+import { planTeamDetach } from "@renderer/utils/references";
 import { useContextMenuStore } from "@renderer/stores/context-menu.store";
 import { rendererLogger } from "@renderer/utils/logger";
 
@@ -13,6 +15,7 @@ const contextMenuStore = useContextMenuStore();
 
 const teamsStore = useTeamsStore();
 const playersStore = usePlayersStore();
+const matchsStore = useMatchsStore();
 const currentTournament = useCurrentTournament();
 const toast = useToast();
 
@@ -57,6 +60,27 @@ function requestDelete(team: TeamRecord) {
 async function confirmDelete() {
   if (!deleteTarget.value) return;
   const team = deleteTarget.value;
+
+  const patches = planTeamDetach(team.id, matchsStore.items);
+
+  for (const patch of patches) {
+    const cleanup = await matchsStore.update(patch.id, patch.patch);
+
+    if (!cleanup.success) {
+      rendererLogger.error("DatabaseTeamView", "Team reference cleanup failed", {
+        matchId: patch.id,
+        error: cleanup.error,
+      });
+      toast.add({
+        title: "Delete Failed",
+        description: cleanup.error ?? "Unable to clear the match references.",
+        icon: "i-lucide-x-circle",
+        color: "error",
+      });
+      deleteTarget.value = null;
+      return;
+    }
+  }
 
   const result = await teamsStore.remove(team.id);
   if (result.success) {
