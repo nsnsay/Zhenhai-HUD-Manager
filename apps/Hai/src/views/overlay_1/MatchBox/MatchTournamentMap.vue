@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { CSGO, MapPickDecider, MapPickVeto, MapVeto } from '@zhenhai/csgogsi/types'
+import type { GameState, MapPickDecider, MapPickVeto, MapVeto } from '@zhenhai/csgogsi/types'
 
 const props = defineProps<{
-  gsi: CSGO
+  gsi: GameState
 }>()
 
 const matchInfo = computed(() => props.gsi.matchinfo)

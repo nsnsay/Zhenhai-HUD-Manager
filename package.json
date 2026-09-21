@@ -7,8 +7,8 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "dev:zhen": "turbo run dev --filter=@repo/zhen",
-    "dev:hai": "turbo run dev --filter=@repo/hai",
+    "dev:zhen": "turbo run dev --filter=@zhenhai/zhen",
+    "dev:hai": "turbo run dev --filter=@zhenhai/hai",
     "build": "bun run --cwd apps/Hai build && bun run --cwd apps/Zhen build:win",
     "typecheck": "turbo run typecheck",
     "format": "oxfmt .",

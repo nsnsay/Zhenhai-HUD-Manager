@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { CSGO } from '@zhenhai/csgogsi/types'
+import type { GameState } from '@zhenhai/csgogsi/types'
 import MatchBoxTeamInfo from './MatchBoxTeamInfo.vue'
 import MatchBoxRoundInfo from './MatchBoxRoundInfo.vue'
 import { computed, onUnmounted, ref } from 'vue'
 import { useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
 
 const props = defineProps<{
-  gsi: CSGO
+  gsi: GameState
 }>()
 
 /** 地图结束提示的展示时长。 */

@@ -79,7 +79,7 @@ The built-in default overlay is built by `apps/Hai` with Vite `base: "/overlay/"
 | `team.pipeline.ts` | Attaches the team record and roster into `_db`, resolves team logos and scores from the live match |
 | `match.pipeline.ts` | Resolves the live match metadata (teams, scores, map information) |
 | `settings.pipeline.ts` | Injects the effective settings (see [overlay format](./overlay-format.md)) into `data.settings` |
-| `observer-slot.ts` | Maps CS2 observer slots to HUD slots: `1..9` become `slot + 1`, `10` becomes `0`, `0` and `11+` stay unchanged |
+| `observer-slot.ts` | Maps CS2 observer slots to HUD slots: `0..9` become `slot + 1`, `10` becomes `0`, `11+` stay unchanged |
 
 ## History
 

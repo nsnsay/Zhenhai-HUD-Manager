@@ -28,7 +28,7 @@ interface DbMatch {
 }
 
 function createTeamEnricher(dbService: DatabaseService): GsiMiddleware {
-  return (data: CSGO) => {
+  return (data: GameState) => {
     if (!data || !data.map) return data;
 
     const teamsResult = dbService.list("teams");

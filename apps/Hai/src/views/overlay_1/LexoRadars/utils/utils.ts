@@ -3,10 +3,13 @@ import type { Grenade, InfernoGrenade, Player, Side, Weapon } from '@zhenhai/csg
 import maps, { type MapConfig, type ScaleConfig } from './maps'
 import type {
   ExtendedGrenade,
+  RadarFireObject,
   RadarGrenadeObject,
   RadarGrenadeState,
   RadarPlayerObject,
+  RadarTrail,
 } from './interface'
+import { clearFires, deriveFlameRadius } from './fire'
 
 export const playersStates: Player[][] = []
 export const grenadesStates: Grenade[][] = []
@@ -26,6 +29,27 @@ const shootingState: Record<string, ShootingState> = {}
 
 export const EXPLODE_TIME_FRAG = 1.6
 export const EXPLODE_TIME_FLASH = 1.45
+
+/** 轨迹最多保留的点数，超出后丢弃最旧的点。 */
+export const TRAIL_MAX_POINTS = 60
+
+/** 小于该位移（雷达像素）视为没动，不追加新点。 */
+export const TRAIL_MIN_MOVE_PX = 0.5
+
+/** 连续多少个数据包没有新点，判定投掷物已停止移动。 */
+export const TRAIL_STOP_PACKETS = 2
+
+/** 停止移动后的淡出时长，画布按它换算轨迹透明度。 */
+export const TRAIL_FADE_MS = 1500
+
+/** 淡出结束到删除条目之间留的缓冲，避免提前删掉还在过渡的线。 */
+export const TRAIL_PRUNE_SLACK_MS = 100
+
+/** 轨迹线宽，单位是 1024 雷达坐标系里的像素。 */
+export const TRAIL_STROKE_WIDTH = 6
+
+/** 轨迹虚线样式（实、空的长度）。 */
+export const TRAIL_DASH_PATTERN = [14, 10]
 
 const clamp = (value: number, min: number, max: number): number => {
   if (Number.isNaN(value)) return min
@@ -199,6 +223,160 @@ const getRadarGrenadeState = (grenade: ExtendedGrenade): RadarGrenadeState => {
   return 'inair'
 }
 
+/**
+ * 投掷物轨迹缓存，按渲染对象的 id 索引（多层地图会带上图层后缀）。
+ * 与 playersStates / shootingState 同级，同属雷达的模块级状态。
+ */
+export const grenadeTrails: Record<string, RadarTrail> = {}
+
+/** 当前数据包引用，用于让同一份数据的重复求值只记一次点。 */
+let trailFrameKey: object | null = null
+
+/** 本数据包内已经追加过点的轨迹 id。 */
+let trailFrameTouched = new Set<string>()
+
+/**
+ * 开始处理一个新的数据包。
+ *
+ * 传同一个数据对象引用时视为重复求值，直接返回，
+ * 保证同一帧里 computed 被多次求值也不会重复记点。
+ */
+export const beginTrailFrame = (packet: object | null = null): void => {
+  if (packet !== null) {
+    if (packet === trailFrameKey) return
+    trailFrameKey = packet
+  }
+
+  markIdleTrails()
+  trailFrameTouched = new Set()
+}
+
+/**
+ * 结算上一个数据包：没有新增点的轨迹累加空闲帧，达到阈值即开始淡出。
+ *
+ * 「没有新点」统一覆盖了投掷物落地静止、爆炸后从数据里消失、被清理以及丢包，
+ * 因此不需要按道具类型写各自的落地判定。
+ */
+export const markIdleTrails = (now: number = Date.now()): void => {
+  for (const trail of Object.values(grenadeTrails)) {
+    if (trailFrameTouched.has(trail.id)) {
+      trail.idleFrames = 0
+      continue
+    }
+
+    trail.idleFrames += 1
+
+    if (trail.stoppedAt === null && trail.idleFrames >= TRAIL_STOP_PACKETS) {
+      trail.stoppedAt = now
+    }
+  }
+}
+
+/** 删除淡出已经走完的轨迹。 */
+export const pruneTrails = (now: number = Date.now()): void => {
+  for (const [id, trail] of Object.entries(grenadeTrails)) {
+    if (trail.stoppedAt !== null && now - trail.stoppedAt > TRAIL_FADE_MS + TRAIL_PRUNE_SLACK_MS) {
+      delete grenadeTrails[id]
+    }
+  }
+}
+
+/** 清空所有轨迹，供换图与回合开始时调用。 */
+export const clearTrails = (): void => {
+  for (const id in grenadeTrails) delete grenadeTrails[id]
+  trailFrameTouched = new Set()
+}
+
+export type RadarTrailPath = {
+  id: string
+  side: Side | null
+  points: [number, number][]
+  /** 需要补回给 lineDashOffset 的相位（等于已裁掉的路径长度）。 */
+  dashOffset: number
+  visible: boolean
+  /** 停止移动后的淡出透明度；仍在生长时为 1。 */
+  alpha: number
+}
+
+/** 画布用的轨迹：直接给点列与透明度，省掉每帧解析 SVG 字符串。 */
+export const getTrailRenderablesNumeric = (now: number = Date.now()): RadarTrailPath[] =>
+  Object.values(grenadeTrails)
+    .filter((trail) => trail.points.length >= 2)
+    .map((trail) => ({
+      id: trail.id,
+      side: trail.side,
+      points: trail.points,
+      dashOffset: trail.removedLength,
+      visible: trail.visible,
+      alpha:
+        trail.stoppedAt === null ? 1 : Math.max(0, 1 - (now - trail.stoppedAt) / TRAIL_FADE_MS),
+    }))
+
+/**
+ * 记录一个轨迹点。
+ *
+ * 位置与上一个点几乎重合时不算移动（不追加点，也不刷新空闲计数），
+ * 这样落地的投掷物会自然进入淡出。重新移动则立刻恢复显示。
+ */
+export const recordTrailPoint = ({
+  id,
+  side,
+  position,
+  visible,
+}: {
+  id: string
+  side: Side | null
+  position: [number, number]
+  visible: boolean
+}): void => {
+  let trail = grenadeTrails[id]
+
+  if (!trail) {
+    trail = {
+      id,
+      side,
+      points: [],
+      removedLength: 0,
+      visible,
+      stoppedAt: null,
+      idleFrames: 0,
+    }
+    grenadeTrails[id] = trail
+  }
+
+  trail.side = side
+  trail.visible = visible
+
+  const last = trail.points[trail.points.length - 1]
+  const hasMoved =
+    last === undefined ||
+    Math.hypot(last[0] - position[0], last[1] - position[1]) >= TRAIL_MIN_MOVE_PX
+
+  if (!hasMoved) return
+
+  trail.points.push([position[0], position[1]])
+  trail.stoppedAt = null
+  trail.idleFrames = 0
+  trailFrameTouched.add(id)
+
+  if (trail.points.length > TRAIL_MAX_POINTS) {
+    const removed = trail.points.splice(0, trail.points.length - TRAIL_MAX_POINTS)
+    const head = trail.points[0]
+
+    // 累计被裁掉那段的长度：虚线相位要靠它补回来，否则首点一挪图案就整条滑动
+    if (head) {
+      let previous: [number, number] = head
+
+      for (let index = removed.length - 1; index >= 0; index -= 1) {
+        const point = removed[index]!
+
+        trail.removedLength += Math.hypot(previous[0] - point[0], previous[1] - point[1])
+        previous = point
+      }
+    }
+  }
+}
+
 export const extendGrenade = ({
   grenade,
   mapName,
@@ -220,46 +398,10 @@ export const extendGrenade = ({
 
   /**
    * inferno 特殊处理：
-   * 原始 inferno 本身没有 position，而是火焰点位集合。
-   * 这里将每一个火焰点位转换成一个可渲染的 RadarGrenadeObject。
+   * 它本身没有 position，只有一组火焰点位，无法作为单个投掷物点位渲染，
+   * 统一交给 extendFire 产出火焰区域多边形。
    */
-  if (extGrenade.type === 'inferno') {
-    const flameObjects: RadarGrenadeObject[] = []
-
-    if ('config' in map) {
-      for (const flame of extGrenade.flames) {
-        const position = parsePosition(flame.position, map.config)
-
-        flameObjects.push({
-          ...extGrenade,
-          flames: [],
-          id: `${flame.id}_${extGrenade.id}`,
-          position,
-          state: 'landed',
-          visible: true,
-        })
-      }
-
-      return flameObjects
-    }
-
-    for (const flame of extGrenade.flames) {
-      for (const config of map.configs) {
-        const position = parsePosition(flame.position, config.config)
-
-        flameObjects.push({
-          ...extGrenade,
-          flames: [],
-          id: `${flame.id}_${extGrenade.id}_${config.id}`,
-          position,
-          state: 'landed',
-          visible: config.isVisible(flame.position[2] ?? 0),
-        })
-      }
-    }
-
-    return flameObjects
-  }
+  if (extGrenade.type === 'inferno') return null
 
   const state = getRadarGrenadeState(extGrenade)
 
@@ -274,6 +416,13 @@ export const extendGrenade = ({
       state,
       visible: true,
     }
+
+    recordTrailPoint({
+      id: grenadeObject.id,
+      side: extGrenade.side,
+      position: [position[0] ?? 0, position[1] ?? 0],
+      visible: true,
+    })
 
     return [grenadeObject]
   }
@@ -291,8 +440,63 @@ export const extendGrenade = ({
       visible: config.isVisible(extGrenade.position[2] ?? 0),
     }
 
+    recordTrailPoint({
+      id: grenadeObject.id,
+      side: extGrenade.side,
+      position: [position[0] ?? 0, position[1] ?? 0],
+      visible: grenadeObject.visible,
+    })
+
     return [grenadeObject]
   })
+}
+
+/**
+ * 把 inferno 展开成「每个图层一个火焰区域对象」。
+ *
+ * 覆盖半径在游戏坐标系里推导一次，再按各图层自己的 pxPerUX / pxPerUY 换算，
+ * 保证不同地图缩放下的火团大小都与真实燃烧范围一致。
+ */
+export const extendFire = ({
+  grenade,
+  mapName,
+}: {
+  grenade: InfernoGrenade
+  mapName: string
+}): RadarFireObject[] | null => {
+  const safeMaps = maps as Record<string, MapConfig>
+  const map = safeMaps[mapName]
+
+  if (!map) return null
+
+  const flameRadius = deriveFlameRadius(grenade.flames.map((flame) => flame.position))
+
+  const toFireObject = (
+    id: string,
+    flames: InfernoGrenade['flames'],
+    scale: ScaleConfig,
+  ): RadarFireObject => {
+    const cells = flames.map((flame) => parsePosition(flame.position, scale))
+
+    return {
+      id,
+      cells,
+      radius: (flameRadius * (Math.abs(scale.pxPerUX) + Math.abs(scale.pxPerUY))) / 2,
+      visible: cells.length > 0,
+    }
+  }
+
+  if ('config' in map) {
+    return [toFireObject(grenade.id, grenade.flames, map.config)]
+  }
+
+  return map.configs.map((config) =>
+    toFireObject(
+      `${grenade.id}_${config.id}`,
+      grenade.flames.filter((flame) => config.isVisible(flame.position[2] ?? 0)),
+      config.config,
+    ),
+  )
 }
 
 export const updateDeadLocations = (currentPlayers: Player[]): void => {
@@ -434,4 +638,8 @@ export const resetStates = (): void => {
   for (const key in explosionPlaces) delete explosionPlaces[key]
   for (const key in shootingState) delete shootingState[key]
   for (const key in deadLocations) delete deadLocations[key]
+
+  clearTrails()
+  trailFrameKey = null
+  clearFires()
 }

@@ -12,7 +12,7 @@ const APP_SETTINGS_TYPE = "app-settings";
  * 与 GET /api/settings 使用同一个 composeEffectiveSettings，保证两条出口不分叉。
  */
 function createSettingsEnricher(dbService: DatabaseService): GsiMiddleware {
-  return (data: CSGO) => {
+  return (data: GameState) => {
     if (!data) return data;
 
     const result = dbService.list("extras", { where: { configType: APP_SETTINGS_TYPE } });

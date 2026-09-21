@@ -79,7 +79,7 @@ Express 服务监听 `1469` 端口，默认绑定 `127.0.0.1`。路由分为几�
 | `team.pipeline.ts` | 把队伍记录与阵容写入 `_db`，结合 Live 比赛解析队标与比分 |
 | `match.pipeline.ts` | 解析当前 Live 比赛的元信息（队伍、比分、地图信息） |
 | `settings.pipeline.ts` | 把生效设置注入 `data.settings`（见 [Overlay 清单](./overlay-format.md)） |
-| `observer-slot.ts` | 把 CS2 观战槽位映射到 HUD 槽位：`1..9` 变为 `slot + 1`，`10` 变为 `0`，`0` 与 `11+` 保持原值 |
+| `observer-slot.ts` | 把 CS2 观战槽位映射到 HUD 槽位：`0..9` 变为 `slot + 1`，`10` 变为 `0`，`11+` 保持原值 |
 
 ## 历史
 

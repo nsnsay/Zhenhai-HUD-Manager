@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CSGO } from '@zhenhai/csgogsi/types'
+import type { GameState } from '@zhenhai/csgogsi/types'
 import Weapons from '../components/Weapons.vue'
 import Grenades from '../components/Grenades.vue'
 import FocusedPlayer from './PlayerBox/FocusedPlayer.vue'
@@ -11,7 +11,7 @@ import MatchTournamentMap from './MatchBox/MatchTournamentMap.vue'
 
 const props = defineProps<{
   ready: boolean
-  gsi: CSGO
+  gsi: GameState
 }>()
 </script>
 

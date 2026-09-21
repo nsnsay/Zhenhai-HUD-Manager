@@ -1,6 +1,6 @@
 import type { DatabaseService } from "../database.service";
 import type { GsiMiddleware } from "../gsi-pipeline.service";
-import type { CSGO, Player, PlayerFormData } from "@zhenhai/csgogsi/types";
+import type { GameState, Player, PlayerFormData } from "@zhenhai/csgogsi/types";
 import { logger } from "../logger.service";
 import { getAssetUrl } from "../../../shared/assets";
 import { toHudObserverSlot } from "./observer-slot";
@@ -20,7 +20,7 @@ interface DbPlayer extends PlayerFormData {
 function createPlayerEnricher(dbService: DatabaseService): GsiMiddleware {
   logger.debug("PlayerEnricher", "Middleware registered");
 
-  return (data: CSGO) => {
+  return (data: GameState) => {
     if (!data) return data;
 
     const players = data.players;

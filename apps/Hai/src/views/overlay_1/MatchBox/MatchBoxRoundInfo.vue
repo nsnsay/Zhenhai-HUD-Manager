@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { CSGO } from '@zhenhai/csgogsi/types'
+import type { GameState } from '@zhenhai/csgogsi/types'
 import SvgIcon from '@/views/components/SvgIcon.vue'
 import { computed, onUnmounted, ref } from 'vue'
 import { useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
 
 const props = defineProps<{
-  gsi: CSGO
+  gsi: GameState
 }>()
 
 const DEFAULT_REGULATION_MR = 12

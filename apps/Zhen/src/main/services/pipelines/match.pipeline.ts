@@ -39,7 +39,7 @@ function toTeamInfo(team: DbTeam, matchTeamScore: number): TeamInfo {
 }
 
 function createMatchEnricher(dbService: DatabaseService): GsiMiddleware {
-  return (data: CSGO) => {
+  return (data: GameState) => {
     if (!data) return data;
 
     const result = dbService.list("matchs");

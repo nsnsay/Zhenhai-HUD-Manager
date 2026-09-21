@@ -1,34 +1,47 @@
 <script setup lang="ts">
+/**
+ * 雷达外壳：负责把 GSI 数据换算成 1024 坐标系的雷达对象，再交给画布渲染器。
+ */
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type {
   Bomb,
-  CSGO,
-  FragOrFireBombOrFlashbandGrenade,
+  FragOrFireBombOrFlashbangGrenade,
+  GameState,
   Grenade,
   Player,
   Side,
 } from '@zhenhai/csgogsi/types'
+import { useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
 import maps, { type MapConfig, type ZoomAreas } from './utils/maps'
-import config from './utils/config'
+import RadarCanvas from './RadarCanvas.vue'
 import {
   EXPLODE_TIME_FRAG,
+  beginTrailFrame,
+  clearTrails,
   explosionPlaces,
+  extendFire,
   extendGrenade,
   extendPlayer,
   grenadesStates,
   parsePosition,
   playersStates,
+  pruneTrails,
   resetStates,
   updateDeadLocations,
 } from './utils/utils'
-import type { RadarGrenadeObject, RadarPlayerObject } from './utils/interface'
-import { useHaiSettings } from '@/utils/useHaiSettings'
-const { teamAttrs } = useHaiSettings()
+import type {
+  RadarBombObject,
+  RadarFireObject,
+  RadarGrenadeObject,
+  RadarPlayerObject,
+} from './utils/interface'
+import { clearFires } from './utils/fire'
+import { clearEffects, clearGrenadeSnapshots } from './canvas/scene'
 
 const props = defineProps({
   data: {
-    type: Object as () => CSGO,
-    default: () => ({}) as CSGO,
+    type: Object as () => GameState,
+    default: () => ({}) as GameState,
   },
   size: {
     type: Number,
@@ -36,7 +49,6 @@ const props = defineProps({
   },
 })
 
-const DESCALE_ON_ZOOM = true
 const FOLLOW_PLAYERS_ON_ZOOM = true
 const ZOOM_ENTER_FRAMES = 2
 const ZOOM_EXIT_FRAMES = 2
@@ -46,7 +58,7 @@ const zoomOn = ref(false)
 const smOrigin = ref<[number, number]>([512, 512])
 const smZoom = ref(1)
 
-const lastData = ref<CSGO | null>(null)
+const lastData = ref<GameState | null>(null)
 
 onUnmounted(() => {
   resetStates()
@@ -55,6 +67,9 @@ onUnmounted(() => {
 watch(
   () => props.data,
   (data) => {
+    beginTrailFrame(data)
+    pruneTrails()
+
     const currentGrenades: Grenade[] = data?.grenades || []
     grenadesStates.unshift(currentGrenades)
     grenadesStates.splice(5)
@@ -69,10 +84,10 @@ watch(
       const prev = lastData.value
 
       for (const grenade of currentGrenades.filter(
-        (g): g is FragOrFireBombOrFlashbandGrenade => g.type === 'frag',
+        (g): g is FragOrFireBombOrFlashbangGrenade => g.type === 'frag',
       )) {
         const old = (prev.grenades || []).find(
-          (og): og is FragOrFireBombOrFlashbandGrenade => og.id === grenade.id,
+          (og): og is FragOrFireBombOrFlashbangGrenade => og.id === grenade.id,
         )
 
         if (!old) continue
@@ -93,20 +108,32 @@ watch(
   { immediate: true },
 )
 
-const offset = computed(() => (props.size - (props.size * props.size) / 1024) / 2)
+/**
+ * 新回合直接清空轨迹与火焰：grenade id 会在下一回合复用，
+ * 残留的点位会把两颗不同的道具连成一条线或一块火区。
+ */
+useGsiEvent('roundStart', () => {
+  clearTrails()
+  clearFires()
+  clearEffects()
+  clearGrenadeSnapshots()
+})
 
+/**
+ * 画布按显示尺寸直接铺开，不再让 1024 的层先被缩放再回缩：
+ * 那层变换会让画布纹理被反复重采样，观感发糊。
+ */
 const containerStyle = computed(() => ({
   width: `${props.size}px`,
   height: `${props.size}px`,
-  transform: `scale(${(props.size / 1024).toFixed(4)})`,
-  top: `-${offset.value}px`,
-  left: `-${offset.value}px`,
 }))
 
 const mapName = computed(() => props.data?.map?.name || '')
 
 watch(mapName, () => {
   resetStates()
+  clearEffects()
+  clearGrenadeSnapshots()
 })
 
 const safeMaps = maps as Record<string, MapConfig>
@@ -147,16 +174,54 @@ const grenadesExtended = computed<RadarGrenadeObject[]>(() => {
   })
 })
 
+/** 火焰区域：每个图层一份，两个渲染器都读同一份数据。 */
+const firesExtended = computed<RadarFireObject[]>(() => {
+  const grenades = props.data?.grenades || []
+
+  return grenades.flatMap((grenade) =>
+    grenade.type === 'inferno' ? (extendFire({ grenade, mapName: mapName.value }) ?? []) : [],
+  )
+})
+
+/** 炸弹：carried / planting 阶段不渲染；多层地图按图层各出一份。 */
+const bombObjects = computed<RadarBombObject[]>(() => {
+  const bomb = props.data?.bomb as Bomb | null
+
+  if (!bomb || bomb.state === 'carried' || bomb.state === 'planting') return []
+
+  const map = mapConfig.value
+
+  if (!map) return []
+
+  if ('config' in map) {
+    const position = parsePosition(bomb.position, map.config)
+
+    return position
+      ? [{ id: 'bomb', state: bomb.state, position, visible: true }]
+      : ([] as RadarBombObject[])
+  }
+
+  return map.configs.flatMap((layer) => {
+    const position = parsePosition(bomb.position, layer.config)
+
+    if (!position) return []
+
+    return [
+      {
+        id: `bomb_${layer.id}`,
+        state: bomb.state,
+        position,
+        visible: layer.isVisible(bomb.position[2] ?? 0),
+      },
+    ]
+  })
+})
+
 const zooms = computed<ZoomAreas[]>(() => mapConfig.value?.zooms ?? [])
 
 const activeZoom = computed<ZoomAreas | undefined>(() =>
   zooms.value.find((z) => z.threshold(playersExtended.value)),
 )
-
-const reverseZoom = computed(() => {
-  const rz = 1 / smZoom.value
-  return DESCALE_ON_ZOOM ? rz.toFixed(2) : '1'
-})
 
 watch([playersExtended, activeZoom], () => {
   const alive = playersExtended.value.filter((p) => p.isAlive && p.visible)
@@ -203,128 +268,6 @@ watch([playersExtended, activeZoom], () => {
 
   smZoom.value = Number((smZoom.value + (targetZoom - smZoom.value) * 0.25).toFixed(3))
 })
-
-const mapStyle = computed(() => {
-  if (!mapConfig.value) return {}
-
-  const bg = {
-    backgroundImage: `url(${mapConfig.value.file})`,
-  }
-
-  return {
-    ...bg,
-    transform: `scale(${smZoom.value})`,
-    transformOrigin: `${smOrigin.value[0]}px ${smOrigin.value[1]}px`,
-  }
-})
-
-const isShootingNow = (lastShoot: number) => Date.now() - lastShoot <= 250
-
-const playerClasses = (player: RadarPlayerObject) => {
-  return [
-    'player',
-    player.isShooting ? 'shooting' : '',
-    player.isFlashed ? 'flashed' : '',
-    player.side,
-    player.hasBomb ? 'hasBomb' : '',
-    player.isActive ? 'active' : '',
-    !player.isAlive ? 'dead' : '',
-    player.visible ? 'visible' : 'hidden',
-  ]
-    .filter(Boolean)
-    .join(' ')
-}
-
-const playerStyle = (player: RadarPlayerObject) => ({
-  transform: `translateX(${(player.position[0] ?? 0).toFixed(
-    2,
-  )}px) translateY(${(player.position[1] ?? 0).toFixed(2)}px) translateZ(10px) scale(1)`,
-})
-
-const playerContentStyle = (player: RadarPlayerObject) => ({
-  width: `${config.playerSize * player.scale}px`,
-  height: `${config.playerSize * player.scale}px`,
-})
-
-const grenadesRenderable = computed(() => grenadesExtended.value)
-
-const grenadeClasses = (grenade: RadarGrenadeObject) => {
-  return [
-    'grenade',
-    grenade.type,
-    grenade.state,
-    grenade.side || '',
-    grenade.visible ? 'visible' : 'hidden',
-  ]
-    .filter(Boolean)
-    .join(' ')
-}
-
-const grenadeStyle = (grenade: RadarGrenadeObject) => ({
-  transform: `translateX(${(grenade.position[0] ?? 0).toFixed(2)}px) translateY(${(
-    grenade.position[1] ?? 0
-  ).toFixed(2)}px) translateZ(10px) scale(${reverseZoom.value})`,
-})
-
-const bombRenderable = computed(() => {
-  const bomb = props.data?.bomb
-
-  if (!bomb) return false
-
-  return !(bomb.state === 'carried' || bomb.state === 'planting')
-})
-
-type BombElement = {
-  key: string
-  class: string
-  style: {
-    transform: string
-  }
-}
-
-const bombElements = computed<BombElement[]>(() => {
-  const bomb = props.data?.bomb as Bomb | null
-
-  if (!bombRenderable.value || !bomb || !mapConfig.value) {
-    return [] as BombElement[]
-  }
-
-  if ('config' in mapConfig.value) {
-    const pos = parsePosition(bomb.position, mapConfig.value.config)
-
-    if (!pos) return []
-
-    return [
-      {
-        key: 'bomb_single',
-        class: `bomb ${bomb.state} visible`,
-        style: {
-          transform: `translateX(${(pos[0] ?? 0).toFixed(2)}px) translateY(${(pos[1] ?? 0).toFixed(
-            2,
-          )}px) translateZ(10px) scale(${reverseZoom.value})`,
-        },
-      },
-    ]
-  }
-
-  const elements = mapConfig.value.configs.map((cfg) => {
-    const pos = parsePosition(bomb.position, cfg.config)
-
-    if (!pos) return null
-
-    return {
-      key: `bomb_${cfg.id}`,
-      class: `bomb ${bomb.state} ${cfg.isVisible(bomb.position[2] ?? 0) ? 'visible' : 'hidden'}`,
-      style: {
-        transform: `translateX(${(pos[0] ?? 0).toFixed(2)}px) translateY(${(pos[1] ?? 0).toFixed(
-          2,
-        )}px) translateZ(10px) scale(${reverseZoom.value})`,
-      },
-    } as BombElement
-  })
-
-  return elements.filter((b): b is BombElement => b !== null)
-})
 </script>
 
 <template>
@@ -332,94 +275,28 @@ const bombElements = computed<BombElement[]>(() => {
     <div class="map-containers">
       <div class="map-container" :style="containerStyle">
         <template v-if="isSupportedMap">
-          <div class="map drop-shadow-pri drop-shadow-xl" :style="mapStyle">
-            <!-- Players -->
-            <div
-              v-for="player in playersExtended"
-              :key="player.id"
-              :class="playerClasses(player)"
-              :style="playerStyle(player)"
-              v-bind="teamAttrs(player.team.side)"
-            >
-              <div class="content" :style="playerContentStyle(player)">
-                <div
-                  class="background-fire"
-                  :style="{
-                    transform: `rotate(${-90 + (player.position[2] ?? 0)}deg)`,
-                    opacity: isShootingNow(player.lastShoot) ? 1 : 0,
-                  }"
-                >
-                  <div class="bg" />
-                </div>
-
-                <div
-                  class="background"
-                  :style="
-                    !player.isAlive
-                      ? {}
-                      : {
-                          transform: `rotate(${0 + (player.position[2] ?? 0)}deg) scale(${player.isActive ? 2.6 : 2.2}) translate(0)`,
-                        }
-                  "
-                />
-
-                <div class="label">
-                  {{ player.observer_slot }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Grenades -->
-            <div
-              v-for="grenade in grenadesRenderable"
-              :key="grenade.id"
-              :class="grenadeClasses(grenade)"
-              :style="grenadeStyle(grenade)"
-            >
-              <div
-                class="content"
-                :style="
-                  grenade.type === 'smoke' &&
-                  (grenade.state === 'landed' || grenade.state === 'exploded')
-                    ? {
-                        width: `${config.smokeSize}px`,
-                        height: `${config.smokeSize}px`,
-                      }
-                    : {}
-                "
-              >
-                <div class="explode-point" />
-                <div class="background" />
-              </div>
-            </div>
-
-            <!-- Bomb -->
-            <template v-if="bombRenderable">
-              <div
-                v-for="bombEl in bombElements"
-                :key="bombEl.key"
-                :class="bombEl.class"
-                :style="bombEl.style"
-              >
-                <div class="content">
-                  <div class="explode-point" />
-                  <div class="background" />
-                </div>
-              </div>
-            </template>
-          </div>
+          <RadarCanvas
+            :map-config="mapConfig"
+            :size="size"
+            :zoom="smZoom"
+            :zoom-origin="smOrigin"
+            :players="playersExtended"
+            :grenades="grenadesExtended"
+            :bomb-objects="bombObjects"
+            :fires="firesExtended"
+          />
         </template>
 
         <template v-else>
           <div
             class="map"
-            style="
-              width: 1024px;
-              height: 1024px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            "
+            :style="{
+              width: `${size}px`,
+              height: `${size}px`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }"
           >
             Unsupported map
           </div>
@@ -430,21 +307,6 @@ const bombElements = computed<BombElement[]>(() => {
 </template>
 
 <style lang="scss">
-@use './utils/index.scss';
-
-.fade-enter-active,
-.fade-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
 .radar-container {
   position: absolute;
   top: var(--hai-safe-x);
@@ -460,6 +322,13 @@ const bombElements = computed<BombElement[]>(() => {
   .map-containers {
     overflow: hidden;
     transform: scale(1);
+  }
+
+  .map-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    position: relative;
   }
 }
 </style>
