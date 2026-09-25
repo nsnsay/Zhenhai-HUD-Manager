@@ -490,6 +490,130 @@ export const expandProgress = (elapsed: number, duration: number, loop: boolean)
   return progress >= 1 ? null : progress
 }
 
+/* ------------------------------------------------------------------ *
+ * 自动取景（雷达相机）
+ * ------------------------------------------------------------------ */
+
+/** 自动放大的倍率上限。 */
+export const RADAR_ZOOM_MAX = 2
+
+/**
+ * 自动取景的留白，单位是 1024 雷达坐标系里的像素。
+ *
+ * 包围盒每边额外留出的空隙，避免目标贴到画面边缘。本功能的观感调参点：
+ * 调大 → 取景更保守（放大得更少），调小 → 更容易放大。
+ */
+export const RADAR_FOCUS_PADDING = 100
+
+export interface RadarFocusOptions {
+  padding?: number
+  maxZoom?: number
+}
+
+/** 1024 雷达坐标系里的矩形包围盒。 */
+export type RadarFocusBounds = {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+}
+
+export type RadarFocusBox = {
+  /** 画面中心（1024 雷达坐标系）。 */
+  origin: [number, number]
+  /** 1 = 全景，上限为 maxZoom。 */
+  zoom: number
+  /** 已加留白的包围盒，供相机平滑时做包含性夹取。 */
+  bounds: RadarFocusBounds
+}
+
+/**
+ * 由关注点算出自动取景的中心与倍率。
+ *
+ * 把包围盒每边扩出 padding 后整体放进 RADAR_SIZE 的画面，取横竖两个方向所需倍率中
+ * 较小的那个（保证两个方向都装得下），再夹到 [1, maxZoom]。
+ *
+ * 返回 null 表示没有关注点：调用方应保持当前取景，而不是跳回全景。
+ */
+export const radarFocusBox = (
+  points: readonly (readonly [number, number])[],
+  options: RadarFocusOptions = {},
+): RadarFocusBox | null => {
+  if (points.length === 0) return null
+
+  const padding = options.padding ?? RADAR_FOCUS_PADDING
+  const maxZoom = options.maxZoom ?? RADAR_ZOOM_MAX
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const [x, y] of points) {
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+  }
+
+  const spanX = maxX - minX + padding * 2
+  const spanY = maxY - minY + padding * 2
+  const fit = Math.min(RADAR_SIZE / spanX, RADAR_SIZE / spanY)
+
+  return {
+    origin: [(minX + maxX) / 2, (minY + maxY) / 2],
+    zoom: Math.min(maxZoom, Math.max(1, fit)),
+    bounds: {
+      minX: minX - padding,
+      minY: minY - padding,
+      maxX: maxX + padding,
+      maxY: maxY + padding,
+    },
+  }
+}
+
+/** 把值夹进 [min, max]；区间本身为空（min > max）时退回区间中点。 */
+const clampIntoRange = (value: number, min: number, max: number): number =>
+  min > max ? (min + max) / 2 : Math.min(max, Math.max(min, value))
+
+/**
+ * 把当前相机夹回「一定装得下 bounds」的范围。
+ *
+ * 平滑会让相机中心滞后于目标、倍率也可能已经先缩下去；视野变小而中心还在半路时，
+ * 聚在地图角落的选手就会被切到画面外。这里做两件事：
+ *
+ * 1. 倍率不得高于「刚好装下带留白的包围盒」所需的值，即视野不小于包围盒；
+ * 2. 中心夹到「包围盒仍完整可见」的区间里（贴边到极限时退回包围盒中心）。
+ *
+ * 注意 `fit` 下限取 1：整图已经是最大的视野，不再往外缩。
+ */
+export const containFocusView = (
+  view: { origin: readonly [number, number]; zoom: number },
+  bounds: RadarFocusBounds,
+): { origin: [number, number]; zoom: number } => {
+  const spanX = bounds.maxX - bounds.minX
+  const spanY = bounds.maxY - bounds.minY
+
+  const fit = Math.max(
+    1,
+    Math.min(
+      spanX > 0 ? RADAR_SIZE / spanX : Infinity,
+      spanY > 0 ? RADAR_SIZE / spanY : Infinity,
+    ),
+  )
+
+  const zoom = Math.min(view.zoom, fit)
+  const half = RADAR_SIZE / (2 * zoom)
+
+  return {
+    zoom,
+    origin: [
+      clampIntoRange(view.origin[0], bounds.maxX - half, bounds.minX + half),
+      clampIntoRange(view.origin[1], bounds.maxY - half, bounds.minY + half),
+    ],
+  }
+}
+
 /** 从 `useHaiSettings().teamColor(side)` 的变量字典里取颜色，缺失时回退。 */
 export const colorFromVars = (
   vars: Record<string, string> | undefined,

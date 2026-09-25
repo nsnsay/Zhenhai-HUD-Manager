@@ -2,7 +2,7 @@
 import { useI18n } from "vue-i18n";
 
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { useColorMode } from "@vueuse/core";
+import { useColorMode, useEventListener } from "@vueuse/core";
 import type { DropdownMenuItem, NavigationMenuItem } from "@nuxt/ui";
 import { usePlayersStore } from "@renderer/stores/usePlayersStore";
 import { useTeamsStore } from "@renderer/stores/useTeamsStore";
@@ -279,55 +279,28 @@ const user = ref({
 
 const showSettingsModal = ref(false);
 
+/**
+ * Ctrl/Cmd + , 打开设置 —— Apple 的标准设置快捷键在 Electron 里的等价物。
+ * 外观已经并进设置面板的「通用」页，这里不再保留第二份入口与那个没有处理函数的 Log out。
+ */
+useEventListener(window, "keydown", (event: KeyboardEvent) => {
+  if (event.key === "," && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    showSettingsModal.value = true;
+  }
+});
+
 const userItems = computed<DropdownMenuItem[][]>(() => [
   [
     {
-      label: "Settings",
+      label: t("settings.title"),
       icon: "i-lucide-settings",
+      kbds: ["ctrl", ","],
       onSelect() {
         showSettingsModal.value = true;
       },
     },
   ],
-  [
-    {
-      label: "Appearance",
-      icon: "i-lucide-sun-moon",
-      children: [
-        {
-          label: "Light",
-          icon: "i-lucide-sun",
-          type: "checkbox",
-          checked: colorMode.value === "light",
-          onUpdateChecked(checked: boolean) {
-            if (checked) {
-              colorMode.value = "light";
-              syncNativeTheme("light");
-            }
-          },
-          onSelect(e: Event) {
-            e.preventDefault();
-          },
-        },
-        {
-          label: "Dark",
-          icon: "i-lucide-moon",
-          type: "checkbox",
-          checked: colorMode.value === "dark",
-          onUpdateChecked(checked: boolean) {
-            if (checked) {
-              colorMode.value = "dark";
-              syncNativeTheme("dark");
-            }
-          },
-          onSelect(e: Event) {
-            e.preventDefault();
-          },
-        },
-      ],
-    },
-  ],
-  [{ label: "Log out", icon: "i-lucide-log-out" }],
 ]);
 
 const tournamentModalRef = ref<InstanceType<typeof TournamentModal>>();

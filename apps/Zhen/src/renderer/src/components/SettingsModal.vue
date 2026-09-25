@@ -1,306 +1,80 @@
 <script setup lang="ts">
+/**
+ * 设置面板外壳：左侧分区 rail + 右侧内容。
+ *
+ * 这里只负责布局、分区状态与数据装载；每个分区的设置项在自己的 pane 组件里，
+ * 通过 `useAppSettings()` 共享同一个「即时生效」控制器（provide/inject）。
+ */
+import { computed, provide, ref, watch, type Component } from "vue";
 import { useI18n } from "vue-i18n";
-
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { inject } from "vue";
-import {
-  APP_SETTINGS_CONFIG_TYPE,
-  mergeAppSettings,
-  type AppSettings,
-  type ExtrasRecord,
-  useExtrasStore,
-} from "@renderer/stores/useExtrasStore";
+import { provideAppSettings } from "@renderer/composables/useAppSettings";
 import { rendererLogger } from "@renderer/utils/logger";
-import UpdateProgressCard from "@renderer/components/UpdateProgressCard.vue";
-import ShortcutInput from "@renderer/components/ShortcutInput.vue";
-import { useUpdaterStore } from "@renderer/stores/useUpdaterStore";
-import { SERVER_HOST_LOCAL, SERVER_PORT } from "../../../shared/server";
-import { resolveLocale } from "@renderer/utils/locale";
-import {
-  DEFAULT_SHORTCUTS,
-  SHORTCUT_ACTIONS,
-  type ShortcutAction,
-  type ShortcutBindings,
-} from "../../../shared/shortcuts";
+import SettingsPaneAbout from "./settings/SettingsPaneAbout.vue";
+import SettingsPaneComponents from "./settings/SettingsPaneComponents.vue";
+import SettingsPaneGeneral from "./settings/SettingsPaneGeneral.vue";
+import SettingsPaneNetwork from "./settings/SettingsPaneNetwork.vue";
+import SettingsPaneRadar from "./settings/SettingsPaneRadar.vue";
+import SettingsPaneShortcuts from "./settings/SettingsPaneShortcuts.vue";
 
 const props = defineProps<{
   open: boolean;
 }>();
+
 const emit = defineEmits(["update:open"]);
-const openStartModal = inject<() => void>("openStartModal");
+const { t } = useI18n();
 
-const { t, locale } = useI18n();
-const toast = useToast();
-const languageOptions = computed(() => [
-  { label: t("settings.languageSystem"), value: "system" },
-  { label: "简体中文", value: "zh-CN" },
-  { label: "English", value: "en-US" },
+const { isLoading, load } = provideAppSettings();
+
+provide("closeSettings", () => emit("update:open", false));
+
+type PaneId = "general" | "components" | "radar" | "shortcuts" | "network" | "about";
+
+/** 记住上次看的分区（HIG settings.md：重新打开时回到上次的 pane）。 */
+const PANE_STORAGE_KEY = "zh-settings-pane";
+
+const panes = computed<Array<{ id: PaneId; label: string; icon: string }>>(() => [
+  { id: "general", label: t("settings.paneGeneral"), icon: "i-lucide-sliders-horizontal" },
+  { id: "components", label: t("settings.paneComponents"), icon: "i-lucide-layout-grid" },
+  { id: "radar", label: t("settings.paneRadar"), icon: "i-lucide-radar" },
+  { id: "shortcuts", label: t("settings.paneShortcuts"), icon: "i-lucide-keyboard" },
+  { id: "network", label: t("settings.paneNetwork"), icon: "i-lucide-network" },
+  { id: "about", label: t("settings.paneAbout"), icon: "i-lucide-info" },
 ]);
-const extrasStore = useExtrasStore();
-const updater = useUpdaterStore();
-const isLoading = ref(false);
-const isSaving = ref(false);
-const recordId = ref<string | null>(null);
-const shortcutBindings = ref<ShortcutBindings>({
-  overlayRefresh: DEFAULT_SHORTCUTS.overlayRefresh,
-  overlayToggleMouseEvents: DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
+
+const paneComponents: Record<PaneId, Component> = {
+  general: SettingsPaneGeneral,
+  components: SettingsPaneComponents,
+  radar: SettingsPaneRadar,
+  shortcuts: SettingsPaneShortcuts,
+  network: SettingsPaneNetwork,
+  about: SettingsPaneAbout,
+};
+
+function readStoredPane(): PaneId {
+  const stored = localStorage.getItem(PANE_STORAGE_KEY);
+
+  return panes.value.some((pane) => pane.id === stored) ? (stored as PaneId) : "general";
+}
+
+const activePane = ref<PaneId>(readStoredPane());
+
+const activePaneLabel = computed(
+  () => panes.value.find((pane) => pane.id === activePane.value)?.label ?? "",
+);
+
+watch(activePane, (pane) => {
+  localStorage.setItem(PANE_STORAGE_KEY, pane);
 });
-const shortcutErrors = ref<Partial<Record<ShortcutAction, string>>>({});
-const overlayIgnoreMouseEvents = ref(true);
-const activeBinding = ref(`${SERVER_HOST_LOCAL}:${SERVER_PORT}`);
-
-let unsubscribeIgnoreMouse: (() => void) | null = null;
-
-onMounted(async () => {
-  unsubscribeIgnoreMouse = window.api.onOverlayIgnoreMouseChanged((enabled) => {
-    overlayIgnoreMouseEvents.value = enabled;
-  });
-
-  overlayIgnoreMouseEvents.value = await window.api.overlayGetIgnoreMouseEvents();
-});
-
-onUnmounted(() => {
-  unsubscribeIgnoreMouse?.();
-  unsubscribeIgnoreMouse = null;
-});
-
-const formData = ref<AppSettings>(mergeAppSettings(null));
-const existingSettings = ref<Partial<AppSettings>>({});
-const extrasJson = ref("{}");
-
-const modeOptions = [
-  { label: "Disabled", value: false },
-  { label: "Mode 1", value: "mode1" },
-  { label: "Mode 2", value: "mode2" },
-];
-
-const colorFields = [
-  { key: "ctDefaultColor", label: "CT Default Color" },
-  { key: "tDefaultColor", label: "T Default Color" },
-  { key: "primaryDefaultColor", label: "Primary Color" },
-  { key: "secondaryDefaultColor", label: "Secondary Color" },
-] as const;
-
-const modeFields = [
-  { key: "overlayPlayerSidebarMode", label: "Player Sidebar" },
-  { key: "overlayPlayerFocusedMode", label: "Player Focused" },
-  { key: "overlayMatchBarMode", label: "Match Bar" },
-  { key: "overlayMatchInfoMode", label: "Match Info" },
-  { key: "overlayRadarMode", label: "Radar" },
-  { key: "overlayKillfeedMode", label: "Killfeed" },
-] as const;
-
-const windowMaterialOptions: Array<{
-  label: string;
-  value: AppSettings["windowMaterial"];
-}> = [
-  { label: "Off", value: "none" },
-  { label: "Acrylic", value: "acrylic" },
-  { label: "Mica", value: "mica" },
-];
-
-function applyWindowMaterialBody(material: AppSettings["windowMaterial"]) {
-  document.body.dataset.windowMaterial = material;
-}
-
-async function loadSettings() {
-  isLoading.value = true;
-
-  try {
-    await extrasStore.init();
-    const existing = extrasStore.items.find(
-      (item) => item.configType === APP_SETTINGS_CONFIG_TYPE,
-    ) as ExtrasRecord | undefined;
-
-    if (existing) {
-      recordId.value = existing.id;
-      existingSettings.value = existing.settings ?? {};
-
-      formData.value = mergeAppSettings(existing.settings);
-
-      extrasJson.value = JSON.stringify(formData.value.extras || {}, null, 2);
-
-      shortcutBindings.value = {
-        overlayRefresh: formData.value.overlayRefreshShortcut || DEFAULT_SHORTCUTS.overlayRefresh,
-        overlayToggleMouseEvents:
-          formData.value.overlayMouseToggleShortcut || DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
-      };
-
-      shortcutErrors.value = {};
-    } else {
-      recordId.value = null;
-      existingSettings.value = {};
-
-      formData.value = mergeAppSettings(null);
-
-      extrasJson.value = JSON.stringify(formData.value.extras || {}, null, 2);
-
-      shortcutBindings.value = { ...DEFAULT_SHORTCUTS };
-
-      shortcutErrors.value = {};
-    }
-
-    const network = await window.api.app.applyNetworkSettings(
-      formData.value.allowLanAccess === true,
-    );
-
-    if (network.success && network.data) {
-      activeBinding.value = `${network.data.host}:${network.data.port}`;
-    }
-
-    rendererLogger.info("SettingsModal", "Settings loaded", {
-      recordId: recordId.value,
-    });
-    applyWindowMaterialBody(formData.value.windowMaterial);
-  } catch (e) {
-    rendererLogger.error("SettingsModal", "Failed to load settings", e);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-async function saveSettings() {
-  isSaving.value = true;
-  try {
-    let parsedExtras = {};
-    try {
-      parsedExtras = extrasJson.value ? JSON.parse(extrasJson.value) : {};
-    } catch {
-      rendererLogger.warn("SettingsModal", "Extras JSON is invalid");
-      toast.add({
-        title: "JSON Error",
-        description: "Invalid JSON in extras field.",
-        color: "error",
-        icon: "i-lucide-alert-triangle",
-      });
-      isSaving.value = false;
-      return;
-    }
-
-    const nextBindings: ShortcutBindings = {
-      overlayRefresh:
-        shortcutBindings.value.overlayRefresh?.trim() || DEFAULT_SHORTCUTS.overlayRefresh,
-      overlayToggleMouseEvents:
-        shortcutBindings.value.overlayToggleMouseEvents?.trim() ||
-        DEFAULT_SHORTCUTS.overlayToggleMouseEvents,
-    };
-
-    // 先注册快捷键：不可用时中止保存，避免落库一组实际无效的组合键。
-    const previousBindings = await window.api.shortcut.get();
-    const registration = await window.api.shortcut.register(nextBindings);
-    const failedActions = SHORTCUT_ACTIONS.filter((action) => !registration[action]?.success);
-
-    if (failedActions.length > 0) {
-      shortcutErrors.value = Object.fromEntries(
-        failedActions.map((action) => [action, registration[action]?.error ?? "注册失败"]),
-      ) as Partial<Record<ShortcutAction, string>>;
-
-      await window.api.shortcut.register(previousBindings);
-
-      toast.add({
-        title: t("settings.shortcutUnavailableTitle"),
-        description: t("settings.shortcutUnavailableBody"),
-        color: "error",
-        icon: "i-lucide-alert-triangle",
-      });
-
-      return;
-    }
-
-    shortcutErrors.value = {};
-    formData.value.overlayRefreshShortcut = nextBindings.overlayRefresh ?? "";
-    formData.value.overlayMouseToggleShortcut = nextBindings.overlayToggleMouseEvents ?? "";
-
-    const payload: AppSettings = {
-      ...existingSettings.value,
-      ...formData.value,
-      extras: parsedExtras,
-    };
-
-    const dataToSave = {
-      configType: APP_SETTINGS_CONFIG_TYPE,
-      settings: payload,
-    };
-
-    let result;
-    if (recordId.value) {
-      result = await extrasStore.update(recordId.value, dataToSave);
-    } else {
-      result = await extrasStore.create(dataToSave);
-    }
-
-    if (result.success) {
-      const network = await window.api.app.applyNetworkSettings(
-        formData.value.allowLanAccess === true,
-      );
-
-      if (network.success && network.data) {
-        activeBinding.value = `${network.data.host}:${network.data.port}`;
-      } else if (!network.success) {
-        toast.add({
-          title: t("settings.networkFailedTitle"),
-          description: network.error ?? t("settings.networkFailedBody"),
-          color: "error",
-          icon: "i-lucide-alert-triangle",
-        });
-      }
-
-      locale.value = resolveLocale(formData.value.language, navigator.language);
-
-      rendererLogger.info("SettingsModal", "Settings saved", {
-        recordId: recordId.value,
-        shortcuts: nextBindings,
-        allowLanAccess: formData.value.allowLanAccess,
-      });
-      toast.add({
-        title: t("settings.savedTitle"),
-        description: t("settings.savedBody"),
-        icon: "i-lucide-check",
-      });
-      await window.api.setWindowMaterial(formData.value.windowMaterial);
-      applyWindowMaterialBody(formData.value.windowMaterial);
-      emit("update:open", false);
-    } else {
-      rendererLogger.error("SettingsModal", "Settings save failed", result.error);
-      toast.add({
-        title: t("settings.saveFailedTitle"),
-        description: result.error || t("common.unknown"),
-        color: "error",
-        icon: "i-lucide-x-circle",
-      });
-    }
-  } finally {
-    isSaving.value = false;
-  }
-}
-
-async function checkForUpdates() {
-  if (updater.isChecking || updater.isDownloading) return;
-
-  const result = await updater.checkForUpdates();
-
-  if (result.success && !result.updateAvailable) {
-    toast.add({
-      title: t("settings.upToDateTitle"),
-      description: t("settings.upToDateBody"),
-      icon: "i-lucide-check-circle",
-      color: "success",
-    });
-  } else if (!result.success) {
-    toast.add({
-      title: t("settings.checkFailedTitle"),
-      description: result.error || t("settings.checkFailedBody"),
-      icon: "i-lucide-alert-triangle",
-      color: "error",
-    });
-  }
-}
-
 
 watch(
   () => props.open,
-  (val) => {
-    if (val) loadSettings();
+  (open) => {
+    if (!open) return;
+
+    // 每次打开都重读一次：向导、Overlay 页也可能改过同一份设置
+    void load();
+    activePane.value = readStoredPane();
+    rendererLogger.info("SettingsModal", "Opened", { pane: activePane.value });
   },
 );
 </script>
@@ -310,309 +84,81 @@ watch(
     :open="open"
     @update:open="emit('update:open', $event)"
     :title="t('settings.title')"
-    :description="t('settings.description')"
+    :description="activePaneLabel"
     :ui="{
-      content: 'max-w-3xl rounded-2xl bg-elevated/80',
-      header: 'px-6 pt-5 pb-4 border-b border-default/40',
-      body: 'px-6 py-5',
-      footer: 'px-6 py-4 border-t border-default/40',
+      content: 'settings-panel max-w-[880px] rounded-2xl bg-default/70 backdrop-blur-md z-10',
+      header: 'px-5 pt-4 pb-3 border-b border-default/60',
+      body: 'p-0',
+      footer: 'hidden',
     }"
   >
     <template #body>
-      <div v-if="isLoading" class="flex justify-center py-16">
-        <UIcon name="i-lucide-loader-2" class="animate-spin h-6 w-6 text-muted" />
+      <div v-if="isLoading" class="flex h-[420px] items-center justify-center">
+        <UIcon name="i-lucide-loader-2" class="h-5 w-5 animate-spin text-toned" />
       </div>
 
-      <div v-else class="settings-scroll max-h-[62vh] overflow-y-auto pr-2 scrollbar-none">
-        <!-- Colors Section -->
-        <div class="settings-section">
-          <div class="section-heading">
-            <UIcon name="i-lucide-palette" class="h-4 w-4 text-primary" />
-            <div>
-              <h3 class="text-sm font-semibold">Base Settings</h3>
-              <p class="text-xs text-muted">Color identity for team and focused player surfaces.</p>
-            </div>
-          </div>
+      <div v-else class="flex h-[420px]">
+        <nav
+          class="flex w-[200px] shrink-0 flex-col gap-0.5 border-r border-default p-2"
+          :aria-label="t('settings.title')"
+        >
+          <button
+            v-for="pane in panes"
+            :key="pane.id"
+            type="button"
+            class="cursor-pointer flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            :class="
+              pane.id === activePane
+                ? 'bg-accented font-semibold text-highlighted'
+                : 'text-toned hover:bg-elevated'
+            "
+            :aria-current="pane.id === activePane ? 'true' : undefined"
+            @click="activePane = pane.id"
+          >
+            <UIcon :name="pane.icon" class="h-4 w-4 shrink-0" />
+            <span class="truncate">{{ pane.label }}</span>
+          </button>
+        </nav>
 
-          <div class="settings-panel border border-muted">
-            <div class="settings-panel__label">Colors (HSL)</div>
-            <div class="grid grid-cols-2 gap-3">
-              <UFormField v-for="field in colorFields" :key="field.key" :label="field.label">
-                <UPopover>
-                  <UButton color="neutral" variant="outline" class="w-full justify-between">
-                    <span class="flex items-center gap-2">
-                      <span
-                        class="h-4 w-4 rounded-full border border-default shrink-0"
-                        :style="{ backgroundColor: formData[field.key] }"
-                      ></span>
-                      <span class="truncate text-xs font-mono">{{ formData[field.key] }}</span>
-                    </span>
-                    <UIcon name="i-lucide-chevrons-up-down" class="text-muted shrink-0" />
-                  </UButton>
-
-                  <template #content>
-                    <div class="p-3">
-                      <UColorPicker v-model="formData[field.key]" format="hsl" />
-                    </div>
-                  </template>
-                </UPopover>
-              </UFormField>
-            </div>
-          </div>
-
-          <div class="settings-panel border border-muted">
-            <div class="settings-panel__label">{{ t("settings.shortcutsTitle") }}</div>
-            <div class="flex flex-col gap-3">
-              <UFormField :label="t('settings.refreshOverlay')" :error="shortcutErrors.overlayRefresh">
-                <ShortcutInput v-model="shortcutBindings.overlayRefresh" />
-              </UFormField>
-
-              <UFormField
-                :label="t('settings.toggleMouseEvents')"
-                :error="shortcutErrors.overlayToggleMouseEvents"
-              >
-                <ShortcutInput v-model="shortcutBindings.overlayToggleMouseEvents" />
-              </UFormField>
-            </div>
-            <p class="mt-2 text-xs text-muted">
-              {{
-                t("settings.mouseEventsState", {
-                  state: overlayIgnoreMouseEvents
-                    ? t("settings.mousePassThrough")
-                    : t("settings.mouseInteractive"),
-                })
-              }}
-            </p>
-          </div>
-
-          <div class="settings-panel border border-muted">
-            <div class="settings-panel__label">{{ t("settings.language") }}</div>
-            <USelect
-              v-model="formData.language"
-              :items="languageOptions"
-              value-key="value"
-              class="mt-3 w-full"
-            />
-            <p class="mt-1 text-xs text-muted">{{ t("settings.languageHint") }}</p>
-          </div>
-
-          <div class="settings-panel border border-muted">
-            <div class="settings-panel__label">{{ t("settings.networkTitle") }}</div>
-            <p class="mt-1 text-xs text-muted">
-              {{ t("settings.networkHint", { binding: activeBinding }) }}
-            </p>
-            <div class="mt-3 flex items-center justify-between gap-3">
-              <span class="text-xs text-muted">{{ t("settings.allowLan") }}</span>
-              <USwitch v-model="formData.allowLanAccess" />
-            </div>
-          </div>
-
-          <div class="settings-panel border border-muted">
-            <div class="settings-panel__label">Window Material</div>
-            <p class="mt-1 text-xs text-muted">
-              Acrylic and Mica are available on supported Windows versions.
-            </p>
-            <USelect
-              v-model="formData.windowMaterial"
-              :items="windowMaterialOptions"
-              value-key="value"
-              class="mt-3 w-full"
-            />
-          </div>
-
-          <div class="settings-panel settings-panel--action">
-            <div class="w-full">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <div class="settings-panel__label">Application Update</div>
-                  <p class="text-xs text-muted">Check GitHub releases for a newer version.</p>
-                </div>
-
-                <UButton
-                  v-if="updater.isAvailable"
-                  label="Download Update"
-                  icon="i-lucide-download-cloud"
-                  color="primary"
-                  variant="subtle"
-                  size="sm"
-                  @click="void updater.downloadUpdate()"
-                />
-                <UButton
-                  v-else-if="updater.isDownloaded"
-                  label="Restart & Install"
-                  icon="i-lucide-refresh-cw"
-                  color="primary"
-                  variant="subtle"
-                  size="sm"
-                  @click="void updater.installUpdate()"
-                />
-                <UButton
-                  v-else
-                  label="Check for Updates"
-                  icon="i-lucide-refresh-cw"
-                  color="primary"
-                  variant="subtle"
-                  size="sm"
-                  :loading="updater.isChecking"
-                  :disabled="updater.isDownloading"
-                  @click="checkForUpdates"
-                />
-              </div>
-
-              <UpdateProgressCard class="mt-3" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Modes Section -->
-        <div class="settings-section">
-          <div class="section-heading">
-            <UIcon name="i-lucide-layout-grid" class="h-4 w-4 text-primary" />
-            <div>
-              <h3 class="text-sm font-semibold">Overlay Components Mode</h3>
-              <p class="text-xs text-muted">Control which HUD systems are rendered.</p>
-            </div>
-          </div>
-
-          <div class="settings-panel border border-muted">
-            <div class="grid grid-cols-2 gap-3">
-              <UFormField v-for="field in modeFields" :key="field.key" :label="field.label">
-                <USelect
-                  v-model="formData[field.key]"
-                  :items="modeOptions"
-                  value-key="value"
-                  class="w-full"
-                />
-              </UFormField>
-            </div>
-          </div>
-        </div>
-
-        <!-- Misc Section -->
-        <div class="settings-section">
-          <div class="section-heading">
-            <UIcon name="i-lucide-sliders-horizontal" class="h-4 w-4 text-primary" />
-            <div>
-              <h3 class="text-sm font-semibold">Miscellaneous</h3>
-              <p class="text-xs text-muted">Overlay geometry and advanced developer settings.</p>
-            </div>
-          </div>
-
-          <div class="settings-panel border border-muted">
-            <div class="grid grid-cols-3 gap-3">
-              <UFormField label="Overlay Border Radius (px)">
-                <UInputNumber v-model="formData.overlayBorderRadius" :min="0" :max="32" />
-              </UFormField>
-              <UFormField label="Overlay Safezone X Axis">
-                <UInputNumber v-model="formData.overlaySafeZoneX" :min="0" :max="128" />
-              </UFormField>
-
-              <UFormField label="Overlay Safezone Y Axis">
-                <UInputNumber v-model="formData.overlaySafeZoneY" :min="0" :max="128" />
-              </UFormField>
-            </div>
-            <UFormField class="mt-3" label="Extras (Custom JSON)" hint="Advanced configuration">
-              <UTextarea
-                v-model="extrasJson"
-                :rows="5"
-                placeholder="{}"
-                class="w-full font-mono text-xs"
-              />
-            </UFormField>
-          </div>
-
-          <div class="settings-panel settings-panel--action">
-            <div>
-              <div class="settings-panel__label">First-run Wizard</div>
-              <p class="text-xs text-muted">Reopen CS2 path and tournament setup flow.</p>
-            </div>
-            <UButton
-              label="Re-run Wizard"
-              icon="i-lucide-wand-2"
-              color="neutral"
-              variant="outline"
-              size="sm"
-              @click="
-                openStartModal?.();
-                emit('update:open', false);
-              "
-            />
-          </div>
+        <div class="min-w-0 flex-1 overflow-y-auto p-5 scrollbar-none">
+          <Transition name="settings-pane" mode="out-in">
+            <component :is="paneComponents[activePane]" :key="activePane" />
+          </Transition>
         </div>
       </div>
-    </template>
-
-    <template #footer="{ close }">
-      <UButton label="Cancel" color="neutral" variant="outline" @click="close" />
-      <UButton label="Save Changes" color="primary" :loading="isSaving" @click="saveSettings" />
     </template>
   </UModal>
 </template>
 
 <style scoped lang="scss">
-.settings-scroll {
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
+.settings-pane-enter-active,
+.settings-pane-leave-active {
+  transition:
+    opacity 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
 }
 
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.settings-pane-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
-.section-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 2px;
-}
-
-.section-heading h3 {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.section-heading p {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--ui-text-muted);
-}
-
-.settings-panel {
-  border-radius: var(--radius-md);
-  padding: 14px;
-}
-
-.settings-panel--action {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.settings-panel__label {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.settings-panel__label + .text-xs {
-  margin-top: 2px;
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .settings-panel,
-  .settings-scroll {
-    backdrop-filter: none;
-  }
+.settings-pane-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .settings-panel {
-    transition: none;
+  .settings-pane-enter-active,
+  .settings-pane-leave-active {
+    transition: opacity 100ms ease;
+    will-change: auto;
+  }
+
+  .settings-pane-enter-from,
+  .settings-pane-leave-to {
+    transform: none;
   }
 }
 </style>

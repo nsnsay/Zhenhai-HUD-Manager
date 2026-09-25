@@ -12,8 +12,9 @@ import type {
   Side,
 } from '@zhenhai/csgogsi/types'
 import { useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
-import maps, { type MapConfig, type ZoomAreas } from './utils/maps'
+import maps, { type MapConfig } from './utils/maps'
 import RadarCanvas from './RadarCanvas.vue'
+import { RADAR_SETTING_DEFAULTS, type RadarDock } from '@zhenhai/csgogsi/radar-settings'
 import {
   EXPLODE_TIME_FRAG,
   beginTrailFrame,
@@ -36,7 +37,14 @@ import type {
   RadarPlayerObject,
 } from './utils/interface'
 import { clearFires } from './utils/fire'
-import { clearEffects, clearGrenadeSnapshots } from './canvas/scene'
+import {
+  clearEffects,
+  clearGrenadeSnapshots,
+  containFocusView,
+  radarFocusBox,
+  type RadarFocusBounds,
+  type RadarFocusBox,
+} from './canvas/scene'
 
 const props = defineProps({
   data: {
@@ -49,13 +57,15 @@ const props = defineProps({
   },
 })
 
-const FOLLOW_PLAYERS_ON_ZOOM = true
-const ZOOM_ENTER_FRAMES = 2
-const ZOOM_EXIT_FRAMES = 2
+/**
+ * 自动取景的平滑系数：每收到一个 GSI 包向目标走 25%。
+ * GSI 心跳是 0.1s，因此约 0.9s 收敛。
+ */
+const ZOOM_SMOOTHING = 0.25
+/** 关闭自动放大时的取景：全景；zoom = 1 时 origin 不参与变换。 */
+const FULL_VIEW_ORIGIN: [number, number] = [512, 512]
 
-const zoomFrames = ref(0)
-const zoomOn = ref(false)
-const smOrigin = ref<[number, number]>([512, 512])
+const smOrigin = ref<[number, number]>([...FULL_VIEW_ORIGIN])
 const smZoom = ref(1)
 
 const lastData = ref<GameState | null>(null)
@@ -124,8 +134,8 @@ useGsiEvent('roundStart', () => {
  * 那层变换会让画布纹理被反复重采样，观感发糊。
  */
 const containerStyle = computed(() => ({
-  width: `${props.size}px`,
-  height: `${props.size}px`,
+  width: `${radarSize.value}px`,
+  height: `${radarSize.value}px`,
 }))
 
 const mapName = computed(() => props.data?.map?.name || '')
@@ -217,67 +227,102 @@ const bombObjects = computed<RadarBombObject[]>(() => {
   })
 })
 
-const zooms = computed<ZoomAreas[]>(() => mapConfig.value?.zooms ?? [])
-
-const activeZoom = computed<ZoomAreas | undefined>(() =>
-  zooms.value.find((z) => z.threshold(playersExtended.value)),
+/**
+ * 自动取景的输入点：只取当前图层可见、且还活着的选手。
+ *
+ * `visible` 不能省：Nuke / Vertigo 这类双层地图上同一选手会有多个图层副本，
+ * 不筛的话包围盒会横跨上下层，取景会落到两个图层之间。
+ */
+const focusPoints = computed<[number, number][]>(() =>
+  playersExtended.value
+    .filter((player) => player.isAlive && player.visible)
+    .map((player) => [player.position[0] ?? 0, player.position[1] ?? 0]),
 )
 
-watch([playersExtended, activeZoom], () => {
-  const alive = playersExtended.value.filter((p) => p.isAlive && p.visible)
+const autoZoomEnabled = computed(() => props.data?.settings?.overlayRadarAutoZoom === true)
 
-  let targetOrigin: [number, number] = activeZoom.value
-    ? (activeZoom.value.origin as [number, number])
-    : smOrigin.value
+/**
+ * 设置面板里可调的雷达观感参数。
+ *
+ * 全部以共享默认值兜底：旧数据包或第三方 Overlay 缺字段时，行为与从前完全一致。
+ */
+const radarSize = computed(() => props.data?.settings?.overlayRadarSize ?? props.size)
+const radarDock = computed<RadarDock>(
+  () => props.data?.settings?.overlayRadarDock ?? RADAR_SETTING_DEFAULTS.overlayRadarDock,
+)
+const radarZoomMax = computed(
+  () => props.data?.settings?.overlayRadarZoomMax ?? RADAR_SETTING_DEFAULTS.overlayRadarZoomMax,
+)
+const radarFocusPadding = computed(
+  () =>
+    props.data?.settings?.overlayRadarFocusPadding ??
+    RADAR_SETTING_DEFAULTS.overlayRadarFocusPadding,
+)
 
-  if (FOLLOW_PLAYERS_ON_ZOOM && alive.length > 0) {
-    let sx = 0
-    let sy = 0
+type FocusTarget = {
+  origin: [number, number]
+  zoom: number
+  /** null = 不做包含性夹取（关闭自动放大时视野恒为全景，夹取没有意义）。 */
+  bounds: RadarFocusBounds | null
+}
 
-    for (const p of alive) {
-      sx += p.position[0] ?? 0
-      sy += p.position[1] ?? 0
-    }
+/**
+ * 目标取景。
+ *
+ * - 开关关闭：固定全景；
+ * - 开关打开但没有可跟目标（全死 / 无数据）：返回 null，保持当前取景不跳变。
+ */
+const focusTarget = computed<FocusTarget | null>(() =>
+  autoZoomEnabled.value
+    ? radarFocusBox(focusPoints.value, {
+        padding: radarFocusPadding.value,
+        maxZoom: radarZoomMax.value,
+      })
+    : { origin: [...FULL_VIEW_ORIGIN], zoom: 1, bounds: null },
+)
 
-    const cx = Math.min(1024, Math.max(0, sx / alive.length))
-    const cy = Math.min(1024, Math.max(0, sy / alive.length))
+/**
+ * 注意 watch 必须同时依赖 `playersExtended`：平滑是「每个 GSI 包走一步」，
+ * 只盯目标的话过渡只会跑一帧就停在半路。
+ */
+watch([focusTarget, playersExtended], () => {
+  const target = focusTarget.value
 
-    targetOrigin = [Number(cx.toFixed(2)), Number(cy.toFixed(2))]
+  if (!target) return
+
+  const eased: { origin: [number, number]; zoom: number } = {
+    origin: [
+      smOrigin.value[0] + (target.origin[0] - smOrigin.value[0]) * ZOOM_SMOOTHING,
+      smOrigin.value[1] + (target.origin[1] - smOrigin.value[1]) * ZOOM_SMOOTHING,
+    ],
+    zoom: smZoom.value + (target.zoom - smZoom.value) * ZOOM_SMOOTHING,
   }
 
-  if (activeZoom.value) {
-    zoomFrames.value = Math.min(ZOOM_ENTER_FRAMES, zoomFrames.value + 1)
-  } else {
-    zoomFrames.value = Math.max(0, zoomFrames.value - 1)
-  }
+  /**
+   * 平滑会让相机落后于目标：倍率先缩下去、中心还在半路时，视野会小于包围盒，
+   * 聚在地图角落的选手就被切到画面外。夹取保证任何一帧关注点都完整可见。
+   */
+  const next = target.bounds ? containFocusView(eased, target.bounds) : eased
 
-  if (!zoomOn.value && zoomFrames.value >= ZOOM_ENTER_FRAMES) {
-    zoomOn.value = true
-  }
+  smOrigin.value = next.origin
 
-  if (zoomOn.value && zoomFrames.value <= ZOOM_EXIT_FRAMES - 1 && !activeZoom.value) {
-    zoomOn.value = false
-  }
-
-  const targetZoom = zoomOn.value && activeZoom.value ? activeZoom.value.zoom : 1
-
-  smOrigin.value = [
-    smOrigin.value[0] + (targetOrigin[0] - smOrigin.value[0]) * 0.25,
-    smOrigin.value[1] + (targetOrigin[1] - smOrigin.value[1]) * 0.25,
-  ]
-
-  smZoom.value = Number((smZoom.value + (targetZoom - smZoom.value) * 0.25).toFixed(3))
+  smZoom.value = Number(next.zoom.toFixed(3))
 })
 </script>
 
 <template>
-  <div :class="['radar-container shadow-pri/20 shadow-sm ring ring-sec/40']">
+  <div
+    :class="[
+      'radar-container shadow-pri/20 shadow-sm ring ring-sec/40',
+      `radar-dock-${radarDock}`,
+    ]"
+  >
     <div class="map-containers">
       <div class="map-container" :style="containerStyle">
         <template v-if="isSupportedMap">
           <RadarCanvas
             :map-config="mapConfig"
-            :size="size"
+            :size="radarSize"
             :zoom="smZoom"
             :zoom-origin="smOrigin"
             :players="playersExtended"
@@ -291,8 +336,8 @@ watch([playersExtended, activeZoom], () => {
           <div
             class="map"
             :style="{
-              width: `${size}px`,
-              height: `${size}px`,
+              width: `${radarSize}px`,
+              height: `${radarSize}px`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -309,8 +354,6 @@ watch([playersExtended, activeZoom], () => {
 <style lang="scss">
 .radar-container {
   position: absolute;
-  top: var(--hai-safe-x);
-  left: var(--hai-safe-y);
 
   display: flex;
   align-items: center;
@@ -318,6 +361,30 @@ watch([playersExtended, activeZoom], () => {
   flex-direction: column;
   background: var(--pr-30);
   border-radius: var(--hai-radius);
+
+  /**
+   * 停靠位置：横向用 --hai-safe-x、纵向用 --hai-safe-y，与选手侧栏的约定一致。
+   * （原先这里把 top 绑到了 safe-x、left 绑到了 safe-y，安全区不对称时就会错轴。）
+   */
+  &.radar-dock-top-left {
+    top: var(--hai-safe-y);
+    left: var(--hai-safe-x);
+  }
+
+  &.radar-dock-top-right {
+    top: var(--hai-safe-y);
+    right: var(--hai-safe-x);
+  }
+
+  &.radar-dock-bottom-left {
+    bottom: var(--hai-safe-y);
+    left: var(--hai-safe-x);
+  }
+
+  &.radar-dock-bottom-right {
+    bottom: var(--hai-safe-y);
+    right: var(--hai-safe-x);
+  }
 
   .map-containers {
     overflow: hidden;

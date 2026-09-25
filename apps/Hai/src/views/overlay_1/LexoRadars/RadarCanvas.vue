@@ -6,7 +6,7 @@
  * 因此不再需要先把 1024 的 DOM 层建出来再整体缩放。
  * 动画只在「有新数据 / 还有未完成的动画」时跑帧，空闲即停。
  */
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGsiEvent } from '@zhenhai/csgogsi/gsi-vue'
 import type { MapConfig } from './utils/maps'
 import type {
@@ -66,23 +66,35 @@ const props = defineProps<{
   fires: RadarFireObject[]
 }>()
 
-const { teamColor } = useHaiSettings()
+const { teamColor, settings: haiSettings } = useHaiSettings()
 
 const DEG = Math.PI / 180
 
+/**
+ * 投掷物贴图的绘制框，单位是 1024 雷达坐标系里的像素。
+ *
+ * 它**不是**「1 个贴图」的意思：画布会把 1024 坐标系缩放成实际显示尺寸，
+ * 1 个单位只有约 0.4 屏幕像素，贴图会小到肉眼看不出（掉落的 C4 就是这样消失的）。
+ */
 const GRENADE_BOX_SIZE = 36
 const SMOKE_RIM_COLOR = 'rgba(255, 255, 255, 0.9)'
 const SMOKE_RIM_WIDTH = 7
 const BOMB_BOX_SIZE = 36
 const BOMB_SPRITE_RATIO = 1.2
-/**
- * 炸弹贴图的绘制框。
- *
- * 原来是宽高都取这个值（等价于 CSS `background-size` 同时设宽高），
- * 会把 116×147 的竖图横向拉宽约 27%；现在改成在框内按原图比例缩放。
- */
+/** 炸弹贴图自带留白（116×147），在框内等比缩放后再放大一点，视觉上与投掷物相当。 */
 const BOMB_DRAW_BOX = BOMB_BOX_SIZE * BOMB_SPRITE_RATIO
-const LABEL_FONT = '800 35px "Sora Variable", sans-serif'
+/** 玩家编号的字号（缩放前，单位是 1024 坐标系）。 */
+const LABEL_FONT_SIZE = 35
+const LABEL_SHADOW_OFFSET_X = 1
+const LABEL_SHADOW_OFFSET_Y = 2
+const LABEL_SHADOW_BLUR = 3
+/**
+ * 「保持原屏幕尺寸」的系数。
+ *
+ * 画布整体按 zoom 缩放，视觉权重（线宽、字号、图标框）要乘上它，
+ * 放大后才不会跟着一起变粗变大；zoom = 1 时恒为 1，等价于没有这层处理。
+ */
+const viewDescale = (zoom: number): number => 1 / Math.max(1, zoom)
 const MARKER_NOSE_FILL = '#fff'
 const MARKER_OUTLINE_COLOR = 'rgba(0, 0, 0, 0.9)'
 const MARKER_OUTLINE_WIDTH = 3
@@ -112,6 +124,16 @@ const BOMB_PLANTED_SPREAD = 50
 const DEAD_ALPHA = 0
 
 const canvasEl = ref<HTMLCanvasElement | null>(null)
+
+/**
+ * 玩家标记 / 烟雾 / 火焰描边都可以在设置面板里调；字段缺失时回落到 config 的默认值，
+ * 因此旧数据包与第三方 Overlay 的行为不变。
+ */
+const radarVisual = computed(() => ({
+  playerSize: haiSettings.value?.overlayRadarPlayerSize ?? config.playerSize,
+  smokeSize: haiSettings.value?.overlayRadarSmokeSize ?? config.smokeSize,
+  fireStroke: haiSettings.value?.overlayRadarFireStroke ?? config.fireStrokeWidth,
+}))
 
 /** 最后一个已知的炸弹坐标：bombExplode / bombDefuse 事件没有位置载荷，用它摆特效。 */
 let lastBombPosition: [number, number] | null = null
@@ -171,11 +193,12 @@ const drawRingPulse = (
   radius: number,
   alpha: number,
   color: string,
+  descale: number,
 ): void => {
   ctx.save()
   ctx.globalAlpha = clamp01(alpha)
   ctx.strokeStyle = color
-  ctx.lineWidth = RING_WIDTH
+  ctx.lineWidth = RING_WIDTH * descale
   ctx.beginPath()
   ctx.arc(x, y, Math.max(0.5, radius), 0, Math.PI * 2)
   ctx.stroke()
@@ -183,7 +206,7 @@ const drawRingPulse = (
 }
 
 /** 一次性爆炸 / 拆除特效。 */
-const drawEffects = (ctx: CanvasRenderingContext2D, now: number): void => {
+const drawEffects = (ctx: CanvasRenderingContext2D, now: number, descale: number): void => {
   for (const frame of getEffectFrames(now)) {
     drawRingPulse(
       ctx,
@@ -192,6 +215,7 @@ const drawEffects = (ctx: CanvasRenderingContext2D, now: number): void => {
       frame.radius,
       frame.alpha,
       frame.effect.color,
+      descale,
     )
   }
 }
@@ -204,15 +228,15 @@ const drawMap = (ctx: CanvasRenderingContext2D): void => {
   ctx.drawImage(image, 0, 0, RADAR_SIZE, RADAR_SIZE)
 }
 
-const drawTrails = (ctx: CanvasRenderingContext2D, now: number): void => {
+const drawTrails = (ctx: CanvasRenderingContext2D, now: number, descale: number): void => {
   const trails = getTrailRenderablesNumeric(now)
 
   if (trails.length === 0) return
 
   ctx.save()
   ctx.lineCap = 'round'
-  ctx.lineWidth = TRAIL_STROKE_WIDTH
-  ctx.setLineDash(TRAIL_DASH_PATTERN)
+  ctx.lineWidth = TRAIL_STROKE_WIDTH * descale
+  ctx.setLineDash(TRAIL_DASH_PATTERN.map((segment) => segment * descale))
 
   for (const trail of trails) {
     if (!trail.visible || trail.alpha <= 0) continue
@@ -223,7 +247,7 @@ const drawTrails = (ctx: CanvasRenderingContext2D, now: number): void => {
 
     ctx.globalAlpha = trail.alpha
     // 相位跟着「已裁掉的长度」走：轨迹超长被裁剪时，虚线图案才不会整条滑动
-    ctx.lineDashOffset = trail.dashOffset
+    ctx.lineDashOffset = trail.dashOffset * descale
     ctx.strokeStyle = colorFromVars(
       teamColor(trail.side ?? 'CT'),
       '--main-80',
@@ -244,7 +268,7 @@ const drawTrails = (ctx: CanvasRenderingContext2D, now: number): void => {
   ctx.restore()
 }
 
-const drawFires = (ctx: CanvasRenderingContext2D, now: number): void => {
+const drawFires = (ctx: CanvasRenderingContext2D, now: number, descale: number): void => {
   for (const fire of getFireRings(now)) {
     if (!fire.visible || fire.rings.length === 0) continue
 
@@ -255,7 +279,7 @@ const drawFires = (ctx: CanvasRenderingContext2D, now: number): void => {
 
     ctx.fillStyle = FIRE_FILL
     ctx.fill('evenodd')
-    ctx.lineWidth = config.fireStrokeWidth
+    ctx.lineWidth = radarVisual.value.fireStroke * descale
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     ctx.strokeStyle = FIRE_STROKE
@@ -299,6 +323,7 @@ const drawSmokeCloud = (
   fill: string,
   now: number,
   phaseOffset: number,
+  descale: number,
 ): void => {
   const bumps = smokeCloudBumps(radius, now, phaseOffset)
 
@@ -306,7 +331,7 @@ const drawSmokeCloud = (
 
   // 描边色：放大一圈的并集，只填一次
   ctx.beginPath()
-  traceCircles(ctx, x, y, bumps, SMOKE_RIM_WIDTH)
+  traceCircles(ctx, x, y, bumps, SMOKE_RIM_WIDTH * descale)
   ctx.fillStyle = SMOKE_RIM_COLOR
   ctx.fill()
 
@@ -319,7 +344,7 @@ const drawSmokeCloud = (
   ctx.restore()
 }
 
-const drawGrenades = (ctx: CanvasRenderingContext2D, now: number): void => {
+const drawGrenades = (ctx: CanvasRenderingContext2D, now: number, descale: number): void => {
   for (const grenade of props.grenades) {
     const settledSmoke = isSettledSmoke(grenade)
     const motion = sampleMotion(
@@ -336,7 +361,8 @@ const drawGrenades = (ctx: CanvasRenderingContext2D, now: number): void => {
 
     if (motion.alpha <= 0.01) continue
 
-    const box = settledSmoke ? config.smokeSize : GRENADE_BOX_SIZE
+    // 落地烟雾是地图上的实际覆盖范围（随缩放变大）；飞行中的图标属于视觉权重（保持原尺寸）
+    const box = settledSmoke ? radarVisual.value.smokeSize : GRENADE_BOX_SIZE * descale
 
     ctx.save()
     ctx.globalAlpha = motion.alpha
@@ -358,6 +384,7 @@ const drawGrenades = (ctx: CanvasRenderingContext2D, now: number): void => {
         colorFromVars(teamColor(grenade.side ?? 'CT'), '--main-100', 'rgba(255, 255, 255, 1)'),
         now,
         smokePhaseOffset(grenade.id),
+        descale,
       )
     } else if (!isExplodedBlast(grenade)) {
       const sprite = grenadeSprite(grenade.type, grenade.state)
@@ -388,7 +415,7 @@ const drawGrenades = (ctx: CanvasRenderingContext2D, now: number): void => {
   }
 }
 
-const drawBombs = (ctx: CanvasRenderingContext2D, now: number): void => {
+const drawBombs = (ctx: CanvasRenderingContext2D, now: number, descale: number): void => {
   for (const bomb of props.bombObjects) {
     const key = bombKey(bomb)
     const motion = sampleMotion(
@@ -414,8 +441,8 @@ const drawBombs = (ctx: CanvasRenderingContext2D, now: number): void => {
       const size = containSize(
         image.naturalWidth,
         image.naturalHeight,
-        BOMB_DRAW_BOX,
-        BOMB_DRAW_BOX,
+        BOMB_DRAW_BOX * descale,
+        BOMB_DRAW_BOX * descale,
       )
 
       ctx.save()
@@ -445,6 +472,7 @@ const drawBombs = (ctx: CanvasRenderingContext2D, now: number): void => {
           BOMB_PLANTED_SPREAD * progress,
           RING_ALPHA * (1 - progress),
           RADAR_EFFECT_STYLES.explode.color,
+          descale,
         )
       }
 
@@ -468,16 +496,17 @@ const drawTracer = (
   y: number,
   yaw: number,
   length: number,
+  descale: number,
 ): void => {
   ctx.save()
   ctx.translate(x, y)
   ctx.rotate(headingRotation(yaw) * DEG)
   ctx.strokeStyle = '#fff'
-  ctx.lineWidth = TRACER_WIDTH
+  ctx.lineWidth = TRACER_WIDTH * descale
   ctx.lineCap = 'round'
-  ctx.setLineDash([TRACER_DASH, TRACER_DASH])
+  ctx.setLineDash([TRACER_DASH * descale, TRACER_DASH * descale])
   ctx.shadowColor = TRACER_SHADOW
-  ctx.shadowBlur = 2
+  ctx.shadowBlur = 2 * descale
   ctx.beginPath()
   ctx.moveTo(0, 0)
   ctx.lineTo(length, 0)
@@ -498,6 +527,7 @@ const drawPlayerMarker = (
   yaw: number,
   radius: number,
   bodyColor: string,
+  descale: number,
 ): void => {
   const { tip, tangentA, tangentB, tangentAngle } = playerMarkerGeometry(radius)
 
@@ -532,7 +562,7 @@ const drawPlayerMarker = (
   ctx.lineTo(tangentA[0], tangentA[1])
   ctx.arc(0, 0, radius, tangentAngle, Math.PI * 2 - tangentAngle)
   ctx.closePath()
-  ctx.lineWidth = MARKER_OUTLINE_WIDTH
+  ctx.lineWidth = MARKER_OUTLINE_WIDTH * descale
   ctx.lineJoin = 'round'
   ctx.strokeStyle = MARKER_OUTLINE_COLOR
   ctx.stroke()
@@ -548,6 +578,7 @@ const drawPlayerBadge = (
   radius: number,
   src: string,
   index: number,
+  descale: number,
 ): void => {
   const image = getImage(src)
 
@@ -559,7 +590,7 @@ const drawPlayerBadge = (
 
   ctx.save()
   ctx.shadowColor = BADGE_SHADOW
-  ctx.shadowBlur = 3
+  ctx.shadowBlur = 3 * descale
   ctx.drawImage(
     image,
     x + offsetX - size.width / 2,
@@ -570,9 +601,10 @@ const drawPlayerBadge = (
   ctx.restore()
 }
 
-const drawPlayers = (ctx: CanvasRenderingContext2D, now: number): void => {
+const drawPlayers = (ctx: CanvasRenderingContext2D, now: number, descale: number): void => {
   for (const player of sortPlayersForDraw(props.players)) {
-    const box = config.playerSize * player.scale
+    // 标记尺寸属于视觉权重：乘 descale 后，放大时仍保持原来的屏幕大小
+    const box = radarVisual.value.playerSize * player.scale * descale
     const radius = box / 2
     const motion = sampleMotion(
       player.id,
@@ -591,7 +623,7 @@ const drawPlayers = (ctx: CanvasRenderingContext2D, now: number): void => {
     if (player.isAlive && isShootingNow(player.lastShoot, now)) {
       ctx.save()
       ctx.globalAlpha = motion.alpha
-      drawTracer(ctx, motion.x, motion.y, motion.yaw, box)
+      drawTracer(ctx, motion.x, motion.y, motion.yaw, box, descale)
       ctx.restore()
     }
 
@@ -605,13 +637,13 @@ const drawPlayers = (ctx: CanvasRenderingContext2D, now: number): void => {
         'rgba(255, 255, 255, 0.9)',
       )
 
-      drawPlayerMarker(ctx, motion.x, motion.y, motion.yaw, radius, bodyColor)
+      drawPlayerMarker(ctx, motion.x, motion.y, motion.yaw, radius, bodyColor, descale)
 
       // 当前观战对象：圆外一圈描边
       if (player.isActive) {
         ctx.beginPath()
-        ctx.arc(motion.x, motion.y, radius + FOCUS_RING_OFFSET, 0, Math.PI * 2)
-        ctx.lineWidth = FOCUS_RING_WIDTH
+        ctx.arc(motion.x, motion.y, radius + FOCUS_RING_OFFSET * descale, 0, Math.PI * 2)
+        ctx.lineWidth = FOCUS_RING_WIDTH * descale
         ctx.strokeStyle = FOCUS_RING_COLOR
         ctx.stroke()
       }
@@ -623,18 +655,18 @@ const drawPlayers = (ctx: CanvasRenderingContext2D, now: number): void => {
       ].filter((src): src is string => src !== null)
 
       badges.forEach((src, index) => {
-        drawPlayerBadge(ctx, motion.x, motion.y, radius, src, index)
+        drawPlayerBadge(ctx, motion.x, motion.y, radius, src, index, descale)
       })
     }
 
-    ctx.font = LABEL_FONT
+    ctx.font = `800 ${LABEL_FONT_SIZE * descale}px "Sora Variable", sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillStyle = '#fff'
     ctx.shadowColor = TEXT_SHADOW
-    ctx.shadowOffsetX = 1
-    ctx.shadowOffsetY = 2
-    ctx.shadowBlur = 3
+    ctx.shadowOffsetX = LABEL_SHADOW_OFFSET_X * descale
+    ctx.shadowOffsetY = LABEL_SHADOW_OFFSET_Y * descale
+    ctx.shadowBlur = LABEL_SHADOW_BLUR * descale
     ctx.fillText(String(player.observer_slot ?? ''), motion.x, motion.y)
     ctx.restore()
   }
@@ -662,13 +694,16 @@ const draw = (now: number): void => {
     ctx.translate(-props.zoomOrigin[0], -props.zoomOrigin[1])
   }
 
+  // 几何随 zoom 放大；线宽 / 字号 / 图标框乘 descale，保持原来的屏幕尺寸
+  const descale = viewDescale(props.zoom)
+
   drawMap(ctx)
-  drawTrails(ctx, now)
-  drawFires(ctx, now)
-  drawGrenades(ctx, now)
-  drawBombs(ctx, now)
-  drawEffects(ctx, now)
-  drawPlayers(ctx, now)
+  drawTrails(ctx, now, descale)
+  drawFires(ctx, now, descale)
+  drawGrenades(ctx, now, descale)
+  drawBombs(ctx, now, descale)
+  drawEffects(ctx, now, descale)
+  drawPlayers(ctx, now, descale)
 }
 
 /** 还有未完成的动画时继续跑帧，空闲就停。 */

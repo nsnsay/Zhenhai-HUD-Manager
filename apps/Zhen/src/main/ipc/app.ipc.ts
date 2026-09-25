@@ -105,4 +105,7 @@ export function registerAppIpc(): void {
   ipcMain.handle("app:apply-network-settings", async (_, allowLanAccess: unknown) => {
     return serverService.applyLanAccess(allowLanAccess === true);
   });
+
+  // 5. 应用版本号（设置面板「关于与更新」页显示）
+  ipcMain.handle("app:get-version", () => app.getVersion());
 }

@@ -4,6 +4,8 @@
  * 这些类型不属于上游 csgogsi，只是历史上挂在同一个包下对外导出。
  * 迁移到薄壳后原样保留，确保 `@zhenhai/csgogsi/types` 的导入方零改动。
  */
+import type { RadarDock } from "./radar-settings";
+
 export interface MatchsInfo {
   matchType: string;
   matchLength: number;
@@ -114,6 +116,22 @@ export interface SettingFormData {
   overlayMatchBarMode: ComponentMode;
   overlayMatchInfoMode: ComponentMode;
   overlayRadarMode: ComponentMode;
+  /** 雷达是否按「当前可见且存活的选手包围盒」自动放大。 */
+  overlayRadarAutoZoom: boolean;
+  /** 雷达显示尺寸（屏幕像素）。 */
+  overlayRadarSize: number;
+  /** 雷达停靠在地图的哪个角。 */
+  overlayRadarDock: RadarDock;
+  /** 自动放大的倍率上限。 */
+  overlayRadarZoomMax: number;
+  /** 自动取景留白，1024 雷达坐标系单位。 */
+  overlayRadarFocusPadding: number;
+  /** 玩家标记直径，1024 雷达坐标系单位。 */
+  overlayRadarPlayerSize: number;
+  /** 落地烟雾覆盖直径，1024 雷达坐标系单位。 */
+  overlayRadarSmokeSize: number;
+  /** 火焰区域轮廓描边宽度，1024 雷达坐标系单位。 */
+  overlayRadarFireStroke: number;
   overlayKillfeedMode: ComponentMode;
   overlayBorderRadius: number;
   overlayRefreshShortcut: string;

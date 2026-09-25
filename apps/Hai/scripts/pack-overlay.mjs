@@ -1,6 +1,9 @@
 /**
  * 把构建好的 Overlay（apps/Zhen/resources/overlay）压成可再分发的 zip。
  *
+ * 归属：脚本属于 Overlay 前端项目（apps/Hai），因此放在 apps/Hai/scripts；
+ * 由管理端的构建流程调用（apps/Zhen 的 `bun run pack:overlay`）。
+ *
  * - 生成前把 apps/Zhen/package.json 的版本号写入产物里的 overlay.json（单一版本来源）；
  * - 输出到仓库根目录 dist/zhenhai-default-<version>.zip：仅作为可再分发的资源包存在，
  *   electron-builder 不引用该目录，因此绝不会被打进 Electron 安装包；
@@ -11,11 +14,20 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const require = createRequire(import.meta.url);
-const AdmZip = require("adm-zip");
+/** Overlay 前端项目（apps/Hai）：本脚本的归属。 */
+const overlayProjectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = resolve(overlayProjectRoot, "..", "..");
+/** 管理端 Electron 应用（apps/Zhen）：Overlay 构建产物与版本号的来源。 */
+const appRoot = resolve(overlayProjectRoot, "..", "Zhen");
 
-const appRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const repoRoot = resolve(appRoot, "..", "..");
+/**
+ * adm-zip 从管理端解析。
+ *
+ * 本脚本消费的是管理端的构建产物与版本号，本来就必须依赖 apps/Zhen；
+ * 因此复用它已声明的 adm-zip，而不是在 Overlay 项目里再声明一份。
+ */
+const AdmZip = createRequire(join(appRoot, "package.json"))("adm-zip");
+
 const overlayDir = join(appRoot, "resources", "overlay");
 /** 产物目录：仓库根目录 dist/，与 Electron 打包产物彼此独立。 */
 const bundlesDir = join(repoRoot, "dist");

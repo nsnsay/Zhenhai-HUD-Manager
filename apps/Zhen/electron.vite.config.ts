@@ -59,8 +59,12 @@ export default defineConfig({
           },
           formField: {
             slots: {
-              label: "text-[12px] text-muted",
-              hint: "text-[11px]",
+              /**
+               * 桌面端标签不再低于 13.5px：Apple 的桌面最小字号是 10pt（≈13.3px），
+               * 原来的 12px / 11px 只相当于 9pt 左右。
+               */
+              label: "text-[13.5px] text-toned",
+              hint: "text-[13px] text-toned",
             },
           },
           select: {

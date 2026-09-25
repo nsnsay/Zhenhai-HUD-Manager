@@ -9,13 +9,6 @@ import de_vertigo from './de_vertigo'
 import de_ancient from './de_ancient'
 import de_anubis from './de_anubis'
 // import api from "../../../../API";
-import { type Player } from '@zhenhai/csgogsi/types'
-
-export type ZoomAreas = {
-  threshold: (players: Player[]) => boolean
-  origin: number[]
-  zoom: number
-}
 export interface ScaleConfig {
   origin: {
     x: number
@@ -29,7 +22,6 @@ export interface ScaleConfig {
 interface SingleLayer {
   config: ScaleConfig
   file: string
-  zooms?: ZoomAreas[]
 }
 
 interface DoubleLayer {
@@ -39,7 +31,6 @@ interface DoubleLayer {
     isVisible: (height: number) => boolean
   }[]
   file: string
-  zooms?: ZoomAreas[]
 }
 
 export type MapConfig = SingleLayer | DoubleLayer

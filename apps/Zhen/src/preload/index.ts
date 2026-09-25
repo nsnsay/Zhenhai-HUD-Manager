@@ -83,6 +83,7 @@ const api: WindowAPI = {
   },
 
   app: {
+    getVersion: () => ipcRenderer.invoke("app:get-version"),
     getCs2Path: () => ipcRenderer.invoke("app:get-cs2-path"),
     selectDirectory: () => ipcRenderer.invoke("app:select-directory"),
     installCfg: (cs2Path: string) => ipcRenderer.invoke("app:install-cfg", cs2Path),

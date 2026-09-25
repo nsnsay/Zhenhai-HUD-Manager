@@ -26,6 +26,27 @@ body[data-window-material="mica"] {
   background-color: transparent;
 }
 
+/**
+ * 降低透明度偏好下，设置面板改用实色背板 —— 模糊只属于浮层的默认态。
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .settings-panel {
+    background-color: var(--ui-bg-elevated);
+    backdrop-filter: none;
+  }
+}
+
+/**
+ * Reka 的浮层（下拉、弹出层、工具提示）挂在 body 上，包裹层的 z-index 是 auto，
+ * 而模态对话框本体自带 z-index: 10 —— 于是浮层被对话框盖住，表现为「下拉框点不开」。
+ *
+ * 统一把浮层抬到模态之上，与 electron.vite.config.ts 里 dropdownMenu 的 z-[100]
+ * 覆盖保持同一层级。
+ */
+[data-reka-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
 .child-route-enter-active,
 .child-route-leave-active {
   transition:

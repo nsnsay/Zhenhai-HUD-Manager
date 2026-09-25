@@ -40,6 +40,11 @@ import {
   syncGrenadeSnapshots,
   clearEffects,
   clearGrenadeSnapshots,
+  containFocusView,
+  RADAR_FOCUS_PADDING,
+  RADAR_SIZE,
+  RADAR_ZOOM_MAX,
+  radarFocusBox,
 } from '../scene'
 import type { RadarGrenadeObject, RadarPlayerObject } from '../../utils/interface'
 
@@ -506,5 +511,167 @@ describe('颜色与开枪窗口', () => {
     expect(isShootingNow(NOW - 100, NOW)).toBe(true)
     expect(isShootingNow(NOW - SHOOT_WINDOW_MS, NOW)).toBe(true)
     expect(isShootingNow(NOW - SHOOT_WINDOW_MS - 1, NOW)).toBe(false)
+  })
+})
+
+describe('自动取景', () => {
+  it('没有关注点时返回 null，调用方应保持当前取景', () => {
+    expect(radarFocusBox([])).toBeNull()
+  })
+
+  it('单个点：夹到最大倍率，画面中心就是该点', () => {
+    const box = radarFocusBox([[300, 400]])
+
+    expect(box?.zoom).toBe(RADAR_ZOOM_MAX)
+    expect(box?.origin).toEqual([300, 400])
+  })
+
+  it('两点相距 200：仍夹在最大倍率，中心取中点', () => {
+    const box = radarFocusBox([
+      [300, 400],
+      [500, 400],
+    ])
+
+    expect(box?.zoom).toBe(RADAR_ZOOM_MAX)
+    expect(box?.origin).toEqual([400, 400])
+  })
+
+  it('加留白后正好铺满全图时回到 1x', () => {
+    const fullSpan = RADAR_SIZE - RADAR_FOCUS_PADDING * 2
+    const box = radarFocusBox([
+      [100, 512],
+      [100 + fullSpan, 512],
+    ])
+
+    expect(box?.zoom).toBe(1)
+    expect(box?.origin).toEqual([512, 512])
+  })
+
+  it('宽高不等时取较小的倍率，中心取包围盒中心', () => {
+    const box = radarFocusBox([
+      [0, 0],
+      [800, 100],
+    ])
+
+    // 宽边 800 + 2×100 = 1000 → 1024/1000；高边只要 3.41x，取较小者
+    expect(box?.zoom).toBeCloseTo(RADAR_SIZE / 1000, 6)
+    expect(box?.origin).toEqual([400, 50])
+  })
+
+  it('留白与上限可覆盖', () => {
+    const box = radarFocusBox(
+      [
+        [0, 0],
+        [100, 0],
+      ],
+      { padding: 0, maxZoom: 3 },
+    )
+
+    expect(box?.zoom).toBe(3)
+  })
+
+  it('任意输入都落在 [1, 上限] 内', () => {
+    const samples: [number, number][][] = [
+      [[0, 0]],
+      [
+        [-5000, -5000],
+        [5000, 5000],
+      ],
+      [
+        [512, 512],
+        [512, 512],
+      ],
+    ]
+
+    for (const points of samples) {
+      const box = radarFocusBox(points)
+
+      expect(box).not.toBeNull()
+      expect(box!.zoom).toBeGreaterThanOrEqual(1)
+      expect(box!.zoom).toBeLessThanOrEqual(RADAR_ZOOM_MAX)
+    }
+  })
+})
+
+describe('相机包含性夹取', () => {
+  it('倍率不会高于容纳包围盒所需的倍率', () => {
+    const target = radarFocusBox([
+      [200, 200],
+      [600, 600],
+    ])!
+
+    // 相机已经缩到上限（视野 512），但带留白的包围盒是 600
+    const view = containFocusView({ origin: [400, 400], zoom: RADAR_ZOOM_MAX }, target.bounds)
+
+    expect(view.zoom).toBeLessThan(RADAR_ZOOM_MAX)
+    expect(RADAR_SIZE / view.zoom).toBeGreaterThanOrEqual(600)
+  })
+
+  it('中心落在很远处时被夹回包围盒附近', () => {
+    const target = radarFocusBox([
+      [900, 900],
+      [940, 940],
+    ])!
+
+    const view = containFocusView({ origin: [100, 100], zoom: RADAR_ZOOM_MAX }, target.bounds)
+    const half = RADAR_SIZE / (2 * view.zoom)
+
+    expect(view.origin[0]).toBeGreaterThanOrEqual(940 - half)
+    expect(view.origin[1]).toBeGreaterThanOrEqual(940 - half)
+  })
+
+  it('单个点不做倍率夹取', () => {
+    const target = radarFocusBox([[500, 500]])!
+    const view = containFocusView({ origin: [0, 0], zoom: RADAR_ZOOM_MAX }, target.bounds)
+
+    expect(view.zoom).toBe(RADAR_ZOOM_MAX)
+  })
+
+  it('包围盒比整图还大时退回包围盒中心、不再往外缩', () => {
+    const target = radarFocusBox([
+      [-100, -100],
+      [1200, 1200],
+    ])!
+
+    const view = containFocusView({ origin: [-999, -999], zoom: RADAR_ZOOM_MAX }, target.bounds)
+
+    expect(view.zoom).toBe(1)
+    expect(view.origin).toEqual([550, 550])
+  })
+
+  it('回归：相机落后于角落聚集团时，关注点不会落到视野外', () => {
+    const cases: [number, number][][] = [
+      [
+        [24, 24],
+        [44, 44],
+        [64, 24],
+      ],
+      [
+        [1000, 1000],
+        [1020, 1020],
+        [1040, 1000],
+      ],
+      [
+        [0, 512],
+        [1024, 512],
+      ],
+      [[512, 512]],
+    ]
+
+    for (const points of cases) {
+      const target = radarFocusBox(points)!
+      // 最坏情况：中心停在目标的反方向，且倍率已经触顶
+      const stale = {
+        origin: [RADAR_SIZE - target.origin[0], RADAR_SIZE - target.origin[1]] as [number, number],
+        zoom: RADAR_ZOOM_MAX,
+      }
+      const view = containFocusView(stale, target.bounds)
+      const half = RADAR_SIZE / (2 * view.zoom)
+
+      for (const [x, y] of points) {
+        expect(Math.abs(x - view.origin[0])).toBeLessThanOrEqual(half + 1e-9)
+        expect(Math.abs(y - view.origin[1])).toBeLessThanOrEqual(half + 1e-9)
+      }
+    }
   })
 })

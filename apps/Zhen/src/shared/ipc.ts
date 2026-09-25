@@ -167,6 +167,8 @@ export interface WindowAPI {
   };
 
   app: {
+    /** 应用版本号。 */
+    getVersion: () => Promise<string>;
     getCs2Path: () => Promise<AppResult<string>>;
     selectDirectory: () => Promise<AppResult<string | null>>;
     installCfg: (cs2Path: string) => Promise<AppResult<string>>;
