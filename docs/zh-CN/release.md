@@ -12,12 +12,12 @@ bun run build        # apps/Hai build -> apps/Zhen build:win
 
 | 步骤 | 命令 | 产物 |
 | --- | --- | --- |
-| 1 | `bun run --cwd apps/Hai build` | Overlay 构建输出到 `apps/Zhen/resources/overlay`（类型检查 + Vite 构建） |
+| 1 | `bun run --cwd apps/Hai build` | Overlay 构建输出到 `apps/Hai/dist`（类型检查 + Vite 构建） |
 | 2 | `bun run --cwd apps/Zhen version:patch` | 递增 `apps/Zhen/package.json` 的补丁版本号（属于 `build:win` 的一环） |
 | 3 | `bun run --cwd apps/Zhen build` | `typecheck` → `electron-vite build` → `pack:overlay` |
 | 4 | `electron-builder --win` | 在 `apps/Zhen/dist` 生成 NSIS 安装包（electron-builder 的输出目录；`--dir` 输出到 `apps/Zhen/dist/win-unpacked`） |
 
-`pack:overlay` 要求构建产物中包含 `overlay.json`，会把应用版本号写入该清单，输出到仓库根目录的 `dist/zhenhai-default-<version>.zip`，并删除旧版本的压缩包。该 zip 是内置 Overlay 的再分发包，可通过 Overlays 页面重新导入；`dist/` 目录被 git 忽略，且 `electron-builder` 从不引用它，因此资源包压缩件不会被放进安装包。
+`pack:overlay` 按 Overlay 项目 `package.json` 里的 `zhenhaiOverlay` 元数据打包：缺少 `apps/Hai/dist` 时自动先构建，校验入口与清单，把 `name`/`description`/`author`/`version`（内置 Overlay 的版本号取自 `apps/Zhen/package.json`）写入清单，将产物安装到 `resources/overlay`，再输出到仓库根目录的 `dist/zhenhai-default-<version>.zip` 并删除同前缀的历史压缩包。该 zip 是内置 Overlay 的再分发包，可通过 Overlays 页面重新导入；`dist/` 目录被 git 忽略，且 `electron-builder` 从不引用它，因此资源包压缩件不会被放进安装包。
 
 ## 安装包内容
 

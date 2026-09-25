@@ -102,7 +102,7 @@ Overlays read live data from the local server `http://127.0.0.1:1469` over Socke
 Zhenhai-HUD-Manager/
 ├── apps/
 │   ├── Zhen/        # Electron app: manager UI, local server, overlay window
-│   └── Hai/         # Overlay front-end (Vue 3), built into apps/Zhen/resources/overlay
+│   └── Hai/         # Overlay front-end (Vue 3): builds into apps/Hai/dist, installed by pack
 ├── packages/
 │   └── csgogsi/     # Adapter on top of upstream csgogsi 6.0.1
 ├── docs/            # Documentation (zh-CN / en-US)
@@ -137,7 +137,7 @@ bun run build      # Hai build, then the Windows installer for Zhen
 | --- | --- |
 | Root | `dev`, `dev:zhen`, `dev:hai`, `build`, `typecheck`, `lint`, `format`, `clean`, `docs:check` |
 | `apps/Zhen` | `dev`, `build`, `build:win`, `build:unpack`, `test`, `typecheck`, `pack:overlay` |
-| `apps/Hai` | `dev`, `build`, `preview`, `type-check` |
+| `apps/Hai` | `dev`, `build`, `pack`, `preview`, `type-check` |
 
 Unit tests run on `node --test` (`bun run --cwd apps/Zhen test`) and the installer is produced by `bun run build`. More detail in [Development](./docs/en-US/development.md) and [Release](./docs/en-US/release.md).
 

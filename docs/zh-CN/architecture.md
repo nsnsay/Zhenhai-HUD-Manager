@@ -16,7 +16,7 @@ Zhenhai-HUD-Manager/
 │   │   ├── src/shared/           # main / preload / renderer 共用的类型与纯函数
 │   │   ├── resources/            # GSI 配置、构建产物 Overlay、额外内置 Overlay
 │   │   └── electron-builder.yml  # 打包、NSIS 产物与更新发布配置
-│   └── Hai/                      # Overlay 前端（Vue 3），构建输出到 apps/Zhen/resources/overlay
+│   └── Hai/                      # Overlay 前端（Vue 3）：构建到 apps/Hai/dist，由 pack 安装到 apps/Zhen/resources/overlay
 ├── packages/
 │   └── csgogsi/                  # 基于上游 csgogsi 6.0.1 的适配层
 ├── docs/                         # 文档（zh-CN / en-US 镜像）
@@ -30,7 +30,7 @@ Zhenhai-HUD-Manager/
 | 主进程 | `apps/Zhen/src/main` | HTTP + Socket.IO 服务、LowDB 集合、GSI 解析与增强、Overlay 窗口生命周期、全局快捷键、自动更新、日志 |
 | Preload | `apps/Zhen/src/preload` | 面向管理端与 Overlay 窗口的 `contextBridge` 接口（`window.api`） |
 | 渲染进程（管理端） | `apps/Zhen/src/renderer` | Vue 3 + Pinia + Nuxt UI 管理界面（数据库、工具箱、Overlay 管理、设置） |
-| 渲染进程（Overlay） | `apps/Hai` | 直播画面使用的 HUD；生产构建会复制到 `apps/Zhen/resources/overlay` |
+| 渲染进程（Overlay） | `apps/Hai` | 直播画面使用的 HUD；生产构建落在 `apps/Hai/dist`，由 `pack` 安装到 `apps/Zhen/resources/overlay` |
 | 适配包 | `packages/csgogsi` | 重新导出 `csgogsi` 6.0.1，补充 ZhenHai 业务类型与 Vue GSI store |
 | 共享层 | `apps/Zhen/src/shared` | 类型、常量与纯函数，供 main / preload / renderer 与单元测试共用 |
 

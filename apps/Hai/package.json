@@ -3,9 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "author": "nsnsay",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "pack": "bun scripts/pack-overlay.mjs",
     "preview": "vite preview",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
@@ -15,6 +17,13 @@
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
     "format": "oxfmt src/"
+  },
+  "zhenhaiOverlay": {
+    "bundleName": "zhenhai-default",
+    "displayName": "ZhenHai Default Overlay",
+    "description": "Built-in broadcast HUD: player sidebars, focused player, radar, match bar and veto feed. Its visual settings are managed from the app Settings panel.",
+    "versionFrom": "../Zhen/package.json",
+    "installTo": "../Zhen/resources/overlay"
   },
   "dependencies": {
     "@zhenhai/csgogsi": "workspace:*",

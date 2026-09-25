@@ -12,12 +12,12 @@ bun run build        # apps/Hai build -> apps/Zhen build:win
 
 | Step | Command | Result |
 | --- | --- | --- |
-| 1 | `bun run --cwd apps/Hai build` | Overlay bundle written to `apps/Zhen/resources/overlay` (type-check + Vite build) |
+| 1 | `bun run --cwd apps/Hai build` | Overlay bundle written to `apps/Hai/dist` (type-check + Vite build) |
 | 2 | `bun run --cwd apps/Zhen version:patch` | Patch version bumped in `apps/Zhen/package.json` (part of `build:win`) |
 | 3 | `bun run --cwd apps/Zhen build` | `typecheck` → `electron-vite build` → `pack:overlay` |
 | 4 | `electron-builder --win` | NSIS installer in `apps/Zhen/dist` (electron-builder output directory; `--dir` writes `apps/Zhen/dist/win-unpacked`) |
 
-`pack:overlay` requires the built overlay to contain `overlay.json`, stamps the app version into it, writes `dist/zhenhai-default-<version>.zip` in the repository root and deletes older bundles. That zip is a redistributable copy of the built-in overlay for re-import through the Overlays page; the `dist/` folder is git-ignored and is never referenced by `electron-builder`, so bundle zips never end up inside the installer.
+`pack:overlay` packs with the `zhenhaiOverlay` metadata declared in the overlay project's `package.json`: it builds `apps/Hai/dist` when missing, verifies the entry file and manifest, writes `name`/`description`/`author`/`version` into the manifest (the built-in overlay takes its version from `apps/Zhen/package.json`), installs the result into `resources/overlay`, then writes `dist/zhenhai-default-<version>.zip` in the repository root and deletes older bundles with the same prefix. That zip is a redistributable copy of the built-in overlay for re-import through the Overlays page; the `dist/` folder is git-ignored and is never referenced by `electron-builder`, so bundle zips never end up inside the installer.
 
 ## Installer Contents
 

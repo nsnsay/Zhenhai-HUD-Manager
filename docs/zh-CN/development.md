@@ -44,9 +44,12 @@ bun run dev:hai    # 仅 Overlay（Vite 开发服务器 http://localhost:1467/ov
 | `apps/Zhen` | `build:win` | 递增补丁版本号后构建，并执行 `electron-builder --win` |
 | `apps/Zhen` | `test` | `node --test` 单元测试 |
 | `apps/Zhen` | `typecheck` | `typecheck:node` + `typecheck:web` + `typecheck:test` |
-| `apps/Zhen` | `pack:overlay` | 把构建好的 Overlay 压缩到仓库根目录 `dist/` |
+| `apps/Zhen` | `pack:overlay` | 安装内置 Overlay 到 `resources/overlay` 并打包到仓库根目录 `dist/` |
 | `apps/Hai` | `dev` / `build` / `preview` | Vite 开发服务器、类型检查加生产构建、本地预览 |
+| `apps/Hai` | `pack` | 构建 → 校验 → 生成清单 → 产出 `dist/zhenhai-<bundle>-<version>.zip` |
 | `apps/Hai` | `type-check` | `vue-tsc --build` |
+
+Overlay 前端项目在自己的 `package.json` 里用 `zhenhaiOverlay` 声明打包元数据（`bundleName`、`displayName`，以及可选的 `description`、`author`、`versionFrom`、`installTo`）。`bun run pack` 会构建、校验并把 `name`/`description`/`author`/`version` 写入产物清单，再把 zip 输出到仓库根目录 `dist/`；声明了 `installTo` 的项目（内置默认 Overlay）还会把产物镜像到 `apps/Zhen/resources/overlay`。其它 Overlay 项目用 `bun <仓库>/apps/Hai/scripts/pack-overlay.mjs --project <dir>` 独立出包，不触碰管理端资源目录。
 
 ## 测试
 

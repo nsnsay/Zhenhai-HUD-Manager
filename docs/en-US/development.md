@@ -44,9 +44,12 @@ While developing the overlay, register a development overlay in the **Overlays**
 | `apps/Zhen` | `build:win` | Bumps the patch version, builds, then `electron-builder --win` |
 | `apps/Zhen` | `test` | `node --test` unit suite |
 | `apps/Zhen` | `typecheck` | `typecheck:node` + `typecheck:web` + `typecheck:test` |
-| `apps/Zhen` | `pack:overlay` | Zips the built overlay into the repository `dist/` folder |
+| `apps/Zhen` | `pack:overlay` | Installs the built-in overlay into `resources/overlay` and zips it into the repository `dist/` folder |
 | `apps/Hai` | `dev` / `build` / `preview` | Vite dev server, type-check plus production build, local preview |
+| `apps/Hai` | `pack` | Build, verify, generate the manifest, emit `dist/zhenhai-<bundle>-<version>.zip` |
 | `apps/Hai` | `type-check` | `vue-tsc --build` |
+
+An overlay front-end project declares its packaging metadata in its own `package.json` under `zhenhaiOverlay` (`bundleName`, `displayName` and optional `description`, `author`, `versionFrom`, `installTo`). `bun run pack` builds, verifies, writes `name`/`description`/`author`/`version` into the built manifest and drops the zip into the repository `dist/`; a project with `installTo` (the built-in default overlay) also mirrors its build into `apps/Zhen/resources/overlay`. Any other overlay project packs independently with `bun <repo>/apps/Hai/scripts/pack-overlay.mjs --project <dir>` and never touches the manager's resource folders.
 
 ## Tests
 

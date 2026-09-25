@@ -24,7 +24,11 @@ export default defineConfig({
   base: '/overlay/',
   publicDir: './public',
   build: {
-    outDir: '../Zhen/resources/overlay',
+    /**
+     * 只写项目内 dist/：内置默认 Overlay 由 `bun run pack` 安装到
+     * apps/Zhen/resources/overlay，避免两个 Overlay 项目互相覆盖产物。
+     */
+    outDir: 'dist',
     emptyOutDir: true,
   },
   resolve: {

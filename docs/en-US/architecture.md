@@ -16,7 +16,7 @@ Zhenhai-HUD-Manager/
 │   │   ├── src/shared/           # Types + pure helpers shared by main / preload / renderer
 │   │   ├── resources/            # GSI config, built overlay, extra built-in overlays
 │   │   └── electron-builder.yml  # Packaging, NSIS artifact and update publish config
-│   └── Hai/                      # Overlay front-end (Vue 3); builds into apps/Zhen/resources/overlay
+│   └── Hai/                      # Overlay front-end (Vue 3); builds into apps/Hai/dist, installed by pack
 ├── packages/
 │   └── csgogsi/                  # Adapter on top of upstream csgogsi 6.0.1
 ├── docs/                         # Documentation (zh-CN / en-US mirrors)
@@ -30,7 +30,7 @@ Zhenhai-HUD-Manager/
 | Main | `apps/Zhen/src/main` | HTTP + Socket.IO server, LowDB collections, GSI parsing and enrichment, overlay window lifecycle, global shortcuts, auto updater, logging |
 | Preload | `apps/Zhen/src/preload` | `contextBridge` surface (`window.api`) for the manager UI and for the overlay window |
 | Renderer (manager) | `apps/Zhen/src/renderer` | Vue 3 + Pinia + Nuxt UI management interface (database, toolbox, overlay management, settings) |
-| Renderer (overlay) | `apps/Hai` | The broadcast HUD; production build is copied to `apps/Zhen/resources/overlay` |
+| Renderer (overlay) | `apps/Hai` | The broadcast HUD; production build lands in `apps/Hai/dist` and is installed into `apps/Zhen/resources/overlay` by `pack` |
 | Adapter package | `packages/csgogsi` | Re-exports `csgogsi` 6.0.1, adds ZhenHai business types and a Vue GSI store |
 | Shared | `apps/Zhen/src/shared` | Types, constants and pure functions shared by main, preload, renderer and unit tests |
 

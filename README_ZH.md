@@ -102,7 +102,7 @@ Overlay 通过本地服务 `http://127.0.0.1:1469` 的 Socket.IO 或 REST 读取
 Zhenhai-HUD-Manager/
 ├── apps/
 │   ├── Zhen/        # Electron 应用：管理端界面、本地服务、Overlay 窗口
-│   └── Hai/         # Overlay 前端（Vue 3），构建输出到 apps/Zhen/resources/overlay
+│   └── Hai/         # Overlay 前端（Vue 3）：构建到 apps/Hai/dist，由 pack 安装到 apps/Zhen/resources/overlay
 ├── packages/
 │   └── csgogsi/     # 基于上游 csgogsi 6.0.1 的适配层
 ├── docs/            # 文档（zh-CN / en-US）
@@ -137,7 +137,7 @@ bun run build      # 先构建 Hai，再打包 Windows 版 Zhen
 | --- | --- |
 | 根 | `dev`、`dev:zhen`、`dev:hai`、`build`、`typecheck`、`lint`、`format`、`clean`、`docs:check` |
 | `apps/Zhen` | `dev`、`build`、`build:win`、`build:unpack`、`test`、`typecheck`、`pack:overlay` |
-| `apps/Hai` | `dev`、`build`、`preview`、`type-check` |
+| `apps/Hai` | `dev`、`build`、`pack`、`preview`、`type-check` |
 
 单元测试基于 `node --test`（`bun run --cwd apps/Zhen test`），安装包由 `bun run build` 生成。更多内容见 [开发](./docs/zh-CN/development.md) 与 [发布](./docs/zh-CN/release.md)。
 
