@@ -1,7 +1,7 @@
-import type { CSGO } from "@zhenhai/csgogsi";
 import type { DatabaseService } from "../database.service";
 import type { GsiMiddleware } from "../gsi-pipeline.service";
 import type {
+  GameState,
   MatchsInfo,
   TeamFormData,
   TeamInfo,

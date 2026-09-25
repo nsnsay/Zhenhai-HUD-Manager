@@ -1,7 +1,6 @@
-import type { Team, TeamFormData, TeamInfo } from "@zhenhai/csgogsi/types";
+import type { GameState, Team, TeamFormData, TeamInfo } from "@zhenhai/csgogsi/types";
 import type { DatabaseService } from "../database.service";
 import type { GsiMiddleware } from "../gsi-pipeline.service";
-import type { CSGO } from "@zhenhai/csgogsi";
 import { getAssetUrl } from "../../../shared/assets";
 
 interface DbPlayer {

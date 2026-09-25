@@ -7,7 +7,7 @@
 import type { SettingFormData } from "@zhenhai/csgogsi/types";
 import { RADAR_SETTING_DEFAULTS } from "@zhenhai/csgogsi/radar-settings";
 // 带扩展名：这个模块要被 `node --test` 直接加载，Node 的 ESM 解析要求显式后缀。
-import { DEFAULT_SHORTCUTS } from "../../../shared/shortcuts.ts";
+import { DEFAULT_SHORTCUTS } from "../../../shared/shortcuts";
 import type { BaseRecord } from "../types/database-store.types";
 
 export interface AppSettings extends SettingFormData {

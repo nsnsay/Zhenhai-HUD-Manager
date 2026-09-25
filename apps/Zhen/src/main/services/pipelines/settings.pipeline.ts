@@ -1,4 +1,4 @@
-import type { CSGO, SettingFormData } from "@zhenhai/csgogsi/types";
+import type { GameState, SettingFormData } from "@zhenhai/csgogsi/types";
 import type { DatabaseService } from "../database.service";
 import type { GsiMiddleware } from "../gsi-pipeline.service";
 import { composeEffectiveSettings, type OverlayEntry } from "../../../shared/overlays";
